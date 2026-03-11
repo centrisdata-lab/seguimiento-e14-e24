@@ -18,6 +18,7 @@ def get_conn():
 def init_db():
     with get_conn() as conn:
         with conn.cursor() as cur:
+            # Tabla principal E-14 y E-24 por mesa
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS votos (
                     id SERIAL PRIMARY KEY,
@@ -38,7 +39,20 @@ def init_db():
                     UNIQUE(municipio, zona, cod_puesto, mesa)
                 )
             """)
-            # Migrar columnas antiguas si existen
+            # Tabla E-26 por municipio
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS votos_e26 (
+                    id SERIAL PRIMARY KEY,
+                    municipio TEXT NOT NULL UNIQUE,
+                    e26_ahora INTEGER DEFAULT 0,
+                    e26_conservador INTEGER DEFAULT 0,
+                    observacion TEXT DEFAULT '',
+                    usuario TEXT DEFAULT '',
+                    fecha_registro TIMESTAMP DEFAULT NOW(),
+                    fecha_actualizacion TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            # Migraciones columnas legacy
             cur.execute("""
                 DO $$
                 BEGIN
@@ -89,7 +103,7 @@ def health():
     return jsonify({"status": "ok", "time": datetime.now().isoformat()})
 
 
-# ── Obtener votos de una mesa ──────────────────────────────────────────────────
+# ── E-14 / E-24: Obtener votos de una mesa ────────────────────────────────────
 @app.route("/votos", methods=["GET"])
 def get_votos():
     municipio  = request.args.get("municipio", "").strip().upper()
@@ -113,22 +127,22 @@ def get_votos():
         return jsonify({"error": str(e)}), 500
 
 
-# ── Guardar / actualizar votos de una mesa ────────────────────────────────────
+# ── E-14 / E-24: Guardar / actualizar votos de una mesa ───────────────────────
 @app.route("/votos", methods=["POST"])
 def save_votos():
     body = request.get_json(force=True) or {}
-    municipio      = str(body.get("municipio", "")).strip().upper()
-    zona           = body.get("zona")
-    cod_puesto     = body.get("cod_puesto")
-    nom_puesto     = str(body.get("nom_puesto", "")).strip()
-    comision       = str(body.get("comision", "")).strip()
-    mesa           = body.get("mesa")
-    e14_ahora      = int(body.get("e14_ahora") or 0)
+    municipio       = str(body.get("municipio", "")).strip().upper()
+    zona            = body.get("zona")
+    cod_puesto      = body.get("cod_puesto")
+    nom_puesto      = str(body.get("nom_puesto", "")).strip()
+    comision        = str(body.get("comision", "")).strip()
+    mesa            = body.get("mesa")
+    e14_ahora       = int(body.get("e14_ahora") or 0)
     e14_conservador = int(body.get("e14_conservador") or 0)
-    e24_ahora      = int(body.get("e24_ahora") or 0)
+    e24_ahora       = int(body.get("e24_ahora") or 0)
     e24_conservador = int(body.get("e24_conservador") or 0)
-    observacion    = str(body.get("observacion", "")).strip()
-    usuario        = str(body.get("usuario", "")).strip()
+    observacion     = str(body.get("observacion", "")).strip()
+    usuario         = str(body.get("usuario", "")).strip()
 
     if not municipio or zona is None or cod_puesto is None or mesa is None:
         return jsonify({"error": "Faltan campos obligatorios"}), 400
@@ -163,10 +177,62 @@ def save_votos():
         return jsonify({"error": str(e)}), 500
 
 
-# ── Resumen agrupado (por municipio / comision / puesto) ──────────────────────
+# ── E-26: Obtener votos de un municipio ───────────────────────────────────────
+@app.route("/votos_e26", methods=["GET"])
+def get_votos_e26():
+    municipio = request.args.get("municipio", "").strip().upper()
+    if not municipio:
+        return jsonify({"error": "Falta municipio"}), 400
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM votos_e26 WHERE municipio=%s", (municipio,))
+                row = cur.fetchone()
+        return jsonify(dict(row) if row else {})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── E-26: Guardar / actualizar votos de un municipio ──────────────────────────
+@app.route("/votos_e26", methods=["POST"])
+def save_votos_e26():
+    body = request.get_json(force=True) or {}
+    municipio       = str(body.get("municipio", "")).strip().upper()
+    e26_ahora       = int(body.get("e26_ahora") or 0)
+    e26_conservador = int(body.get("e26_conservador") or 0)
+    observacion     = str(body.get("observacion", "")).strip()
+    usuario         = str(body.get("usuario", "")).strip()
+
+    if not municipio:
+        return jsonify({"error": "Falta municipio"}), 400
+
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO votos_e26
+                        (municipio, e26_ahora, e26_conservador, observacion, usuario, fecha_actualizacion)
+                    VALUES (%s,%s,%s,%s,%s,NOW())
+                    ON CONFLICT (municipio)
+                    DO UPDATE SET
+                        e26_ahora       = EXCLUDED.e26_ahora,
+                        e26_conservador = EXCLUDED.e26_conservador,
+                        observacion     = EXCLUDED.observacion,
+                        usuario         = EXCLUDED.usuario,
+                        fecha_actualizacion = NOW()
+                    RETURNING *
+                """, (municipio, e26_ahora, e26_conservador, observacion, usuario))
+                row = cur.fetchone()
+            conn.commit()
+        return jsonify({"ok": True, "data": dict(row)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Resumen detallado E-14 vs E-24 (por municipio/zona/comision/puesto/mesa) ──
 @app.route("/resumen", methods=["GET"])
 def get_resumen():
-    nivel = request.args.get("nivel", "municipio")  # municipio | comision | puesto
+    nivel     = request.args.get("nivel", "municipio")
     municipio = request.args.get("municipio", "").strip().upper()
     comision  = request.args.get("comision", "").strip().upper()
 
@@ -246,7 +312,35 @@ def get_resumen():
         return jsonify({"error": str(e)}), 500
 
 
-# ── Eliminar registro de una mesa ─────────────────────────────────────────────
+# ── Resumen municipal: E-14 + E-24 + E-26 comparados ─────────────────────────
+@app.route("/resumen_municipal", methods=["GET"])
+def get_resumen_municipal():
+    municipio = request.args.get("municipio", "").strip().upper()
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        v.municipio,
+                        SUM(v.e14_ahora)       AS e14_ahora,
+                        SUM(v.e14_conservador)  AS e14_conservador,
+                        SUM(v.e24_ahora)        AS e24_ahora,
+                        SUM(v.e24_conservador)  AS e24_conservador,
+                        e26.e26_ahora,
+                        e26.e26_conservador
+                    FROM votos v
+                    LEFT JOIN votos_e26 e26 ON UPPER(e26.municipio) = UPPER(v.municipio)
+                    WHERE (%s = '' OR UPPER(v.municipio) = %s)
+                    GROUP BY v.municipio, e26.e26_ahora, e26.e26_conservador
+                    ORDER BY v.municipio
+                """, (municipio, municipio))
+                rows = cur.fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Eliminar registro E-14/E-24 de una mesa ───────────────────────────────────
 @app.route("/votos/<int:voto_id>", methods=["DELETE"])
 def delete_voto(voto_id):
     try:
