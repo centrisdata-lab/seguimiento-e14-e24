@@ -173,7 +173,22 @@ def get_resumen():
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
-                if nivel == "puesto":
+                if nivel == "mesa":
+                    cur.execute("""
+                        SELECT id, municipio, comision, nom_puesto, zona, cod_puesto, mesa,
+                               e14_ahora, e14_conservador, e24_ahora, e24_conservador,
+                               observacion, usuario, fecha_actualizacion,
+                               1 AS mesas_registradas,
+                               e14_ahora AS total_e14_ahora,
+                               e14_conservador AS total_e14_conservador,
+                               e24_ahora AS total_e24_ahora,
+                               e24_conservador AS total_e24_conservador
+                        FROM votos
+                        WHERE (%s = '' OR UPPER(municipio) = %s)
+                          AND (%s = '' OR UPPER(comision)  = %s)
+                        ORDER BY municipio, comision, nom_puesto, mesa
+                    """, (municipio, municipio, comision, comision))
+                elif nivel == "puesto":
                     cur.execute("""
                         SELECT municipio, comision, nom_puesto,
                                COUNT(*) AS mesas_registradas,
@@ -214,6 +229,22 @@ def get_resumen():
                     """)
                 rows = cur.fetchall()
         return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Eliminar registro de una mesa ─────────────────────────────────────────────
+@app.route("/votos/<int:voto_id>", methods=["DELETE"])
+def delete_voto(voto_id):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM votos WHERE id=%s RETURNING id", (voto_id,))
+                row = cur.fetchone()
+            conn.commit()
+        if row:
+            return jsonify({"ok": True})
+        return jsonify({"error": "Registro no encontrado"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

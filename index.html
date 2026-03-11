@@ -266,6 +266,7 @@
             <option value="municipio">Municipio</option>
             <option value="comision">Comision</option>
             <option value="puesto">Puesto</option>
+            <option value="mesa">Mesa (detalle)</option>
           </select>
         </div>
         <div class="form-group">
@@ -562,13 +563,16 @@ function renderTablaResumen(rows, nivel) {
   }
 
   // Cabeceras segun nivel
+  const esMesa = nivel === "mesa";
   let cols = [];
   if (nivel === "municipio") {
     cols = [{k:"municipio", label:"Municipio"}];
   } else if (nivel === "comision") {
     cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}];
-  } else {
+  } else if (nivel === "puesto") {
     cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"nom_puesto", label:"Puesto"}];
+  } else {
+    cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"nom_puesto", label:"Puesto"}, {k:"mesa", label:"Mesa"}];
   }
 
   let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>';
@@ -576,6 +580,7 @@ function renderTablaResumen(rows, nivel) {
   html += `<th>Mesas</th>
     <th>E-14 Ahora</th><th>E-24 Ahora</th><th>Dif Ahora</th>
     <th>E-14 Conservador</th><th>E-24 Conservador</th><th>Dif Conservador</th>
+    ${esMesa ? "<th></th>" : ""}
   </tr></thead><tbody>`;
 
   let tMesas=0, tE14a=0, tE24a=0, tE14c=0, tE24c=0;
@@ -590,7 +595,7 @@ function renderTablaResumen(rows, nivel) {
     tE24c  += r.total_e24_conservador||0;
 
     html += "<tr>";
-    cols.forEach(c => { html += `<td>${r[c.k] || ""}</td>`; });
+    cols.forEach(c => { html += `<td>${r[c.k] ?? ""}</td>`; });
     html += `
       <td style="text-align:center">${r.mesas_registradas}</td>
       <td style="text-align:right">${(r.total_e14_ahora||0).toLocaleString()}</td>
@@ -599,12 +604,13 @@ function renderTablaResumen(rows, nivel) {
       <td style="text-align:right">${(r.total_e14_conservador||0).toLocaleString()}</td>
       <td style="text-align:right">${(r.total_e24_conservador||0).toLocaleString()}</td>
       <td style="text-align:center">${difBadge(dc)}</td>
+      ${esMesa ? `<td style="text-align:center"><button onclick="eliminarRegistro(${r.id})" title="Eliminar" style="background:#fee2e2;border:none;border-radius:6px;padding:0.25rem 0.5rem;cursor:pointer;color:#dc2626;font-size:0.75rem;font-weight:700;">&#x2715; Borrar</button></td>` : ""}
     </tr>`;
   });
 
   const tDa = tE14a - tE24a;
   const tDc = tE14c - tE24c;
-  const nLabel = rows.length + (nivel === "municipio" ? " municipios" : nivel === "comision" ? " comisiones" : " puestos");
+  const nLabel = rows.length + (nivel === "municipio" ? " municipios" : nivel === "comision" ? " comisiones" : nivel === "puesto" ? " puestos" : " mesas");
   html += `<tr class="total-row">`;
   cols.forEach((c, i) => { html += `<td>${i === 0 ? "TOTAL (" + nLabel + ")" : ""}</td>`; });
   html += `
@@ -615,10 +621,22 @@ function renderTablaResumen(rows, nivel) {
     <td style="text-align:right">${tE14c.toLocaleString()}</td>
     <td style="text-align:right">${tE24c.toLocaleString()}</td>
     <td style="text-align:center">${difBadge(tDc)}</td>
+    ${esMesa ? "<td></td>" : ""}
   </tr>`;
 
   html += "</tbody></table></div>";
   cont.innerHTML = html;
+}
+
+function eliminarRegistro(id) {
+  if (!confirm("Seguro que deseas eliminar este registro?")) return;
+  fetch(`${API_URL}/votos/${id}`, { method: "DELETE" })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) { showToast("Registro eliminado", "success"); cargarResumen(); }
+      else showToast("Error: " + (data.error || "intenta de nuevo"), "error");
+    })
+    .catch(() => showToast("Error de conexion", "error"));
 }
 
 function difBadge(v) {
