@@ -47,6 +47,9 @@
   .btn-mun { padding:0.45rem 0.9rem; border-radius:8px; border:2px solid #e2e8f0; background:var(--light); color:var(--dark); font-family:'Inter',sans-serif; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.18s; }
   .btn-mun:hover { border-color:var(--primary-light); background:#eff6ff; color:var(--primary); }
   .btn-mun.active { background:var(--gradient); color:white; border-color:var(--primary); }
+  .btn-mun.prioritario { background:#fff7ed; border-color:#f97316; color:#c2410c; }
+  .btn-mun.prioritario:hover { background:#fed7aa; border-color:#ea580c; }
+  .btn-mun.prioritario.active { background:linear-gradient(135deg,#ea580c,#f97316); color:white; border-color:#c2410c; }
 
   .form-row { display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end; margin-bottom:1rem; }
   .form-group { display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:150px; }
@@ -164,6 +167,7 @@
     <button class="tab-btn" onclick="showTab('tab-e24')">E-24</button>
     <button class="tab-btn" onclick="showTab('tab-e26')">E-26</button>
     <button class="tab-btn" onclick="showTab('tab-resumen')">Resumen general</button>
+    <button class="tab-btn" onclick="pedirClaveControl()">Control</button>
   </div>
 
   <!-- ===== TAB E-14 ===== -->
@@ -365,6 +369,26 @@
 
   </div>
 
+  <!-- ===== TAB CONTROL ===== -->
+  <div id="tab-control" class="tab-pane">
+    <div class="card">
+      <div class="card-title">Control de registros</div>
+      <div class="filtros-resumen">
+        <div class="form-group">
+          <label>Filtrar municipio</label>
+          <input type="text" id="ctrl-municipio" placeholder="Todos" oninput="filtrarTablaControl()">
+        </div>
+        <div class="form-group" style="flex:none">
+          <label>&nbsp;</label>
+          <button class="btn-save" onclick="cargarControl()" style="padding:0.5rem 1rem; font-size:0.8rem;">&#x21BB; Actualizar</button>
+        </div>
+      </div>
+      <div id="control-contenido">
+        <div style="color:var(--gray); font-size:0.85rem;">Haz clic en Actualizar para ver los registros.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== TAB RESUMEN ===== -->
   <div id="tab-resumen" class="tab-pane">
     <div class="card">
@@ -432,6 +456,14 @@
 const API_URL = window.location.origin;
 let ESTRUCTURA = null;
 
+const MUNICIPIOS_PRIORITARIOS = new Set([
+  "AMAGA","AMALFI","APARTADO","BARBOSA","BELLO","CALDAS","CAREPA",
+  "CARMEN DE VIBORAL","CAUCASIA","CHIGORODO","CISNEROS","COPACABANA",
+  "ENVIGADO","GIRARDOTA","GUARNE","ITAGUI","LA CEJA","LA ESTRELLA",
+  "LA UNION","MARINILLA","MEDELLIN","NECOCLI","RIONEGRO","SABANETA",
+  "SAN PEDRO DE LOS MILAGROS","SANTA BARBARA","SEGOVIA","SOPETRAN","TURBO"
+]);
+
 // Estado por formato
 const ST = {
   e14: { mun:null, zona:null, codPuesto:null, nomPuesto:null, comision:null, mesa:null },
@@ -480,7 +512,8 @@ function renderMunicipios(fmt) {
   Object.keys(ESTRUCTURA).sort().forEach(m => {
     if (q && !m.toLowerCase().includes(q)) return;
     const btn = document.createElement("button");
-    btn.className = "btn-mun" + (m === ST[fmt].mun ? " active" : "");
+    const esPrio = MUNICIPIOS_PRIORITARIOS.has(m);
+    btn.className = "btn-mun" + (esPrio ? " prioritario" : "") + (m === ST[fmt].mun ? " active" : "");
     btn.textContent = m;
     btn.onclick = () => seleccionarMun(fmt, m);
     grid.appendChild(btn);
@@ -815,7 +848,6 @@ function renderTablaResumen(rows, nivel) {
   html += `<th>Mesas</th>
     <th>E-14 Ahora</th><th>E-24 Ahora</th><th>Dif Ahora</th>
     <th>E-14 Conservador</th><th>E-24 Conservador</th><th>Dif Conservador</th>
-    ${esMesa ? "<th></th>" : ""}
   </tr></thead><tbody>`;
 
   let tMesas=0, tE14a=0, tE24a=0, tE14c=0, tE24c=0;
@@ -837,7 +869,6 @@ function renderTablaResumen(rows, nivel) {
       <td style="text-align:right">${(r.total_e14_conservador||0).toLocaleString()}</td>
       <td style="text-align:right">${(r.total_e24_conservador||0).toLocaleString()}</td>
       <td style="text-align:center">${difBadge(dc)}</td>
-      ${esMesa ? `<td style="text-align:center"><button onclick="eliminarRegistro(${r.id})" title="Eliminar" style="background:#fee2e2;border:none;border-radius:6px;padding:0.25rem 0.5rem;cursor:pointer;color:#dc2626;font-size:0.75rem;font-weight:700;">&#x2715; Borrar</button></td>` : ""}
     </tr>`;
   });
 
@@ -854,7 +885,6 @@ function renderTablaResumen(rows, nivel) {
     <td style="text-align:right">${tE14c.toLocaleString()}</td>
     <td style="text-align:right">${tE24c.toLocaleString()}</td>
     <td style="text-align:center">${difBadge(tDc)}</td>
-    ${esMesa ? "<td></td>" : ""}
   </tr>`;
   html += "</tbody></table></div>";
   cont.innerHTML = html;
@@ -959,17 +989,6 @@ function renderTablaResumenMunicipal(rows) {
   cont.innerHTML = html;
 }
 
-function eliminarRegistro(id) {
-  if (!confirm("Seguro que deseas eliminar este registro?")) return;
-  fetch(`${API_URL}/votos/${id}`, { method: "DELETE" })
-    .then(r => r.json())
-    .then(data => {
-      if (data.ok) { showToast("Registro eliminado", "success"); cargarResumen(); }
-      else showToast("Error: " + (data.error || "intenta de nuevo"), "error");
-    })
-    .catch(() => showToast("Error de conexion", "error"));
-}
-
 function difBadge(v) {
   if (v === null || v === undefined) return '<span style="color:#94a3b8">—</span>';
   const cls = v > 0 ? "pos" : v < 0 ? "neg" : "zero";
@@ -980,6 +999,101 @@ function showToast(msg, type="success") {
   const t = document.getElementById("toast");
   t.textContent = msg; t.className = "toast " + type; t.style.display = "block";
   setTimeout(() => { t.style.display = "none"; }, 3000);
+}
+
+// ── Control: clave de acceso ──────────────────────────────────────────────────
+let controlDesbloqueado = false;
+let ctrlRows = [];
+
+function pedirClaveControl() {
+  if (controlDesbloqueado) { showTab('tab-control'); cargarControl(); return; }
+  const clave = prompt("Ingresa la contrasena para acceder al modulo de Control:");
+  if (clave === null) return; // canceló
+  if (clave === "Antioqui@") {
+    controlDesbloqueado = true;
+    showTab('tab-control');
+    cargarControl();
+  } else {
+    showToast("Contrasena incorrecta", "error");
+  }
+}
+
+function cargarControl() {
+  const municipio = document.getElementById("ctrl-municipio").value.trim();
+  let url = `${API_URL}/resumen?nivel=mesa`;
+  if (municipio) url += `&municipio=${encodeURIComponent(municipio)}`;
+
+  document.getElementById("control-contenido").innerHTML =
+    '<div style="color:var(--gray);font-size:0.85rem;">Cargando...</div>';
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => { ctrlRows = data; renderTablaControl(data); })
+    .catch(() => {
+      document.getElementById("control-contenido").innerHTML =
+        '<div style="color:#dc2626;font-size:0.85rem;">Error al cargar.</div>';
+    });
+}
+
+function filtrarTablaControl() {
+  const q = document.getElementById("ctrl-municipio").value.toLowerCase().trim();
+  const filtered = ctrlRows.filter(r => !q || (r.municipio||"").toLowerCase().includes(q));
+  renderTablaControl(filtered);
+}
+
+function renderTablaControl(rows) {
+  const cont = document.getElementById("control-contenido");
+  if (!rows.length) {
+    cont.innerHTML = '<div style="color:var(--gray);font-size:0.85rem;">No hay registros.</div>';
+    return;
+  }
+  let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>' +
+    '<th>Municipio</th><th>Comision</th><th>Puesto</th><th>Mesa</th>' +
+    '<th>E-14 Ahora</th><th>E-14 Cons</th>' +
+    '<th>E-24 Ahora</th><th>E-24 Cons</th>' +
+    '<th>Observacion</th><th>Usuario</th><th>Actualizado</th><th></th>' +
+    '</tr></thead><tbody>';
+
+  rows.forEach(r => {
+    const fecha = r.fecha_actualizacion
+      ? new Date(r.fecha_actualizacion).toLocaleString("es-CO", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})
+      : "";
+    html += `<tr>
+      <td>${r.municipio||""}</td>
+      <td>${r.comision||""}</td>
+      <td style="text-align:center">${r.cod_puesto||""}</td>
+      <td style="text-align:center">${r.mesa||""}</td>
+      <td style="text-align:right">${(r.e14_ahora||0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.e14_conservador||0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.e24_ahora||0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.e24_conservador||0).toLocaleString()}</td>
+      <td style="font-size:0.72rem;color:var(--gray)">${r.observacion||""}</td>
+      <td style="font-size:0.72rem">${r.usuario||""}</td>
+      <td style="font-size:0.72rem;white-space:nowrap">${fecha}</td>
+      <td><button onclick="eliminarRegistro(${r.id},'control')" style="background:#fee2e2;border:none;border-radius:6px;padding:0.25rem 0.5rem;cursor:pointer;color:#dc2626;font-size:0.75rem;font-weight:700;">&#x2715; Borrar</button></td>
+    </tr>`;
+  });
+  html += `<tr class="total-row"><td colspan="4">TOTAL (${rows.length} mesas)</td>
+    <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e14_ahora||0),0).toLocaleString()}</td>
+    <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e14_conservador||0),0).toLocaleString()}</td>
+    <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e24_ahora||0),0).toLocaleString()}</td>
+    <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e24_conservador||0),0).toLocaleString()}</td>
+    <td colspan="4"></td></tr>`;
+  html += "</tbody></table></div>";
+  cont.innerHTML = html;
+}
+
+function eliminarRegistro(id, origen) {
+  if (!confirm("Seguro que deseas eliminar este registro?")) return;
+  fetch(`${API_URL}/votos/${id}`, { method: "DELETE" })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        showToast("Registro eliminado", "success");
+        if (origen === 'control') cargarControl();
+      } else showToast("Error: " + (data.error || "intenta de nuevo"), "error");
+    })
+    .catch(() => showToast("Error de conexion", "error"));
 }
 
 setInterval(() => fetch(API_URL + "/health").catch(() => {}), 4 * 60 * 1000);
