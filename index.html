@@ -372,7 +372,7 @@ function onZonaChange() {
   const puestos = ESTRUCTURA[munActual][z];
   Object.keys(puestos).sort((a,b) => parseInt(a)-parseInt(b)).forEach(cod => {
     const o = document.createElement("option"); o.value = cod;
-    o.textContent = cod + " — " + puestos[cod].nom;
+    o.textContent = cod;
     selPuesto.appendChild(o);
   });
   selPuesto.disabled = false;
