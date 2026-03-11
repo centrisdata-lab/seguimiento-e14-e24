@@ -264,6 +264,7 @@
           <label>Ver por</label>
           <select id="res-nivel" onchange="cargarResumen()">
             <option value="municipio">Municipio</option>
+            <option value="zona">Zona</option>
             <option value="comision">Comision</option>
             <option value="puesto">Puesto</option>
             <option value="mesa">Mesa (detalle)</option>
@@ -567,6 +568,8 @@ function renderTablaResumen(rows, nivel) {
   let cols = [];
   if (nivel === "municipio") {
     cols = [{k:"municipio", label:"Municipio"}];
+  } else if (nivel === "zona") {
+    cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}];
   } else if (nivel === "comision") {
     cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}];
   } else if (nivel === "puesto") {
@@ -610,7 +613,7 @@ function renderTablaResumen(rows, nivel) {
 
   const tDa = tE14a - tE24a;
   const tDc = tE14c - tE24c;
-  const nLabel = rows.length + (nivel === "municipio" ? " municipios" : nivel === "comision" ? " comisiones" : nivel === "puesto" ? " puestos" : " mesas");
+  const nLabel = rows.length + (nivel === "municipio" ? " municipios" : nivel === "zona" ? " zonas" : nivel === "comision" ? " comisiones" : nivel === "puesto" ? " puestos" : " mesas");
   html += `<tr class="total-row">`;
   cols.forEach((c, i) => { html += `<td>${i === 0 ? "TOTAL (" + nLabel + ")" : ""}</td>`; });
   html += `

@@ -173,7 +173,20 @@ def get_resumen():
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
-                if nivel == "mesa":
+                if nivel == "zona":
+                    cur.execute("""
+                        SELECT municipio, zona,
+                               COUNT(*) AS mesas_registradas,
+                               SUM(e14_ahora) AS total_e14_ahora,
+                               SUM(e14_conservador) AS total_e14_conservador,
+                               SUM(e24_ahora) AS total_e24_ahora,
+                               SUM(e24_conservador) AS total_e24_conservador
+                        FROM votos
+                        WHERE (%s = '' OR UPPER(municipio) = %s)
+                        GROUP BY municipio, zona
+                        ORDER BY municipio, zona
+                    """, (municipio, municipio))
+                elif nivel == "mesa":
                     cur.execute("""
                         SELECT id, municipio, comision, nom_puesto, zona, cod_puesto, mesa,
                                e14_ahora, e14_conservador, e24_ahora, e24_conservador,
