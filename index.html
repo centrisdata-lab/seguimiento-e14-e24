@@ -807,8 +807,8 @@ function renderTablaResumen(rows, nivel) {
   if      (nivel === "municipio") cols = [{k:"municipio", label:"Municipio"}];
   else if (nivel === "zona")      cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}];
   else if (nivel === "comision")  cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}];
-  else if (nivel === "puesto")    cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"nom_puesto", label:"Puesto"}];
-  else                            cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"nom_puesto", label:"Puesto"}, {k:"mesa", label:"Mesa"}];
+  else if (nivel === "puesto")    cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"cod_puesto", label:"Puesto"}];
+  else                            cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"cod_puesto", label:"Puesto"}, {k:"mesa", label:"Mesa"}];
 
   let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>';
   cols.forEach(c => { html += `<th>${c.label}</th>`; });
