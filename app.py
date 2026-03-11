@@ -340,6 +340,34 @@ def get_resumen_municipal():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Cobertura: cuantas mesas/municipios registrados vs total mapeado ──────────
+@app.route("/cobertura", methods=["GET"])
+def get_cobertura():
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                # Mesas con E-14 digitado (e14_ahora > 0 o e14_conservador > 0)
+                cur.execute("SELECT COUNT(*) AS n FROM votos WHERE e14_ahora > 0 OR e14_conservador > 0")
+                e14 = cur.fetchone()["n"]
+                # Mesas con E-24 digitado
+                cur.execute("SELECT COUNT(*) AS n FROM votos WHERE e24_ahora > 0 OR e24_conservador > 0")
+                e24 = cur.fetchone()["n"]
+                # Total mesas registradas (cualquier dato)
+                cur.execute("SELECT COUNT(*) AS n FROM votos")
+                total_reg = cur.fetchone()["n"]
+                # Municipios con E-26
+                cur.execute("SELECT COUNT(*) AS n FROM votos_e26")
+                e26 = cur.fetchone()["n"]
+        return jsonify({
+            "e14_mesas": e14,
+            "e24_mesas": e24,
+            "e26_municipios": e26,
+            "total_registros": total_reg
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── Eliminar registro E-14/E-24 de una mesa ───────────────────────────────────
 @app.route("/votos/<int:voto_id>", methods=["DELETE"])
 def delete_voto(voto_id):
