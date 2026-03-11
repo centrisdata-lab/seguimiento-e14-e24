@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comparacion E-14 vs E-24 — Antioquia 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #001361;
+    --primary-light: #1e40af;
+    --accent: #06b6d4;
+    --success: #10b981;
+    --success-light: #d1fae5;
+    --warning: #f59e0b;
+    --warning-light: #fef3c7;
+    --danger: #ef4444;
+    --danger-light: #fee2e2;
+    --dark: #1e293b;
+    --gray: #64748b;
+    --light: #f1f5f9;
+    --white: #ffffff;
+    --gradient: linear-gradient(135deg, #001361 0%, #1e40af 100%);
+    --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:linear-gradient(180deg,#f8fafc 0%,#e2e8f0 100%); color:var(--dark); min-height:100vh; }
+
+  /* HEADER */
+  .header { background:var(--gradient); color:white; padding:0.75rem 1.5rem; position:sticky; top:0; z-index:100; box-shadow:var(--shadow-lg); }
+  .header-content { max-width:1100px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; }
+  .header h1 { font-size:1.05rem; font-weight:700; }
+  .header-sub { font-size:0.68rem; opacity:0.85; margin-top:0.1rem; }
+  .header-badge { background:rgba(255,255,255,0.15); padding:0.3rem 0.7rem; border-radius:6px; font-size:0.68rem; }
+
+  /* LAYOUT */
+  .container { max-width:1100px; margin:0 auto; padding:1.5rem 1rem; }
+
+  /* STEPS */
+  .steps-bar { display:flex; gap:0.5rem; margin-bottom:1.5rem; align-items:center; flex-wrap:wrap; }
+  .step-pill { display:flex; align-items:center; gap:0.4rem; padding:0.3rem 0.8rem; border-radius:20px; font-size:0.72rem; font-weight:600; background:#e2e8f0; color:var(--gray); transition:all 0.2s; }
+  .step-pill.active { background:var(--gradient); color:white; }
+  .step-pill.done { background:var(--success-light); color:#059669; }
+  .step-arrow { color:#94a3b8; font-size:0.8rem; }
+
+  /* CARDS */
+  .card { background:var(--white); border-radius:14px; padding:1.5rem; box-shadow:var(--shadow-lg); margin-bottom:1.25rem; }
+  .card-title { font-size:1rem; font-weight:700; color:var(--primary); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; }
+  .card-label { font-size:0.65rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.3rem; }
+
+  /* SEARCH INPUT */
+  .search-input { width:100%; max-width:420px; padding:0.55rem 1rem 0.55rem 2.2rem; border-radius:8px; border:2px solid #e2e8f0; font-family:'Inter',sans-serif; font-size:0.88rem; outline:none; transition:border-color 0.2s; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 0.6rem center; }
+  .search-input:focus { border-color:var(--primary-light); }
+
+  /* GRID BOTONES MUNICIPIO */
+  .btn-grid { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.75rem; max-height:280px; overflow-y:auto; padding-right:4px; }
+  .btn-mun { padding:0.45rem 0.9rem; border-radius:8px; border:2px solid #e2e8f0; background:var(--light); color:var(--dark); font-family:'Inter',sans-serif; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.18s; }
+  .btn-mun:hover { border-color:var(--primary-light); background:#eff6ff; color:var(--primary); }
+  .btn-mun.active { background:var(--gradient); color:white; border-color:var(--primary); }
+
+  /* SELECTS / INPUTS DE FORMULARIO */
+  .form-row { display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end; margin-bottom:1rem; }
+  .form-group { display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:160px; }
+  .form-group label { font-size:0.72rem; font-weight:600; color:var(--gray); }
+  .form-group select, .form-group input[type=number], .form-group input[type=text] {
+    padding:0.5rem 0.75rem; border-radius:8px; border:2px solid #e2e8f0;
+    font-family:'Inter',sans-serif; font-size:0.88rem; color:var(--dark);
+    background:var(--light); outline:none; transition:border-color 0.2s;
+  }
+  .form-group select:focus, .form-group input:focus { border-color:var(--primary-light); background:white; }
+  .form-group select:disabled, .form-group input:disabled { opacity:0.5; cursor:not-allowed; }
+
+  /* PANEL DE VOTOS */
+  .votos-panel { display:none; }
+  .votos-panel.visible { display:block; }
+
+  .votos-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+  @media(max-width:600px){ .votos-grid { grid-template-columns:1fr; } .form-row { flex-direction:column; } }
+
+  .votos-card { background:var(--light); border-radius:12px; padding:1.1rem 1rem; border:2px solid #e2e8f0; transition:border-color 0.2s; }
+  .votos-card:focus-within { border-color:var(--primary-light); background:#f0f9ff; }
+  .votos-card-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.4rem; }
+  .votos-card-title.e14 { color:#7c3aed; }
+  .votos-card-title.e24 { color:#0369a1; }
+  .votos-card-title .tag { padding:0.15rem 0.5rem; border-radius:10px; font-size:0.65rem; font-weight:700; }
+  .votos-card-title.e14 .tag { background:#ede9fe; color:#7c3aed; }
+  .votos-card-title.e24 .tag { background:#e0f2fe; color:#0369a1; }
+
+  .voto-field { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.6rem; }
+  .voto-field:last-child { margin-bottom:0; }
+  .voto-label { font-size:0.78rem; font-weight:500; color:var(--dark); white-space:nowrap; }
+  .voto-input { width:90px; padding:0.4rem 0.5rem; border-radius:6px; border:2px solid #e2e8f0; font-family:'Inter',sans-serif; font-size:0.9rem; font-weight:700; color:var(--primary); text-align:center; outline:none; background:white; transition:border-color 0.2s; }
+  .voto-input:focus { border-color:var(--primary-light); }
+
+  /* DIFERENCIAS */
+  .dif-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem; }
+  .dif-card { border-radius:10px; padding:0.75rem 1rem; display:flex; flex-direction:column; gap:0.2rem; }
+  .dif-card.camara { background:#faf5ff; border:1px solid #ddd6fe; }
+  .dif-card.senado { background:#f0f9ff; border:1px solid #bae6fd; }
+  .dif-card .dif-titulo { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--gray); }
+  .dif-card .dif-val { font-size:1.3rem; font-weight:800; }
+  .dif-pos { color:#dc2626; }
+  .dif-neg { color:#059669; }
+  .dif-zero { color:var(--gray); }
+
+  /* BOTONES DE ACCION */
+  .btn-save { background:var(--gradient); color:white; border:none; border-radius:8px; padding:0.6rem 1.8rem; font-family:'Inter',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:0.5rem; transition:opacity 0.2s; }
+  .btn-save:hover { opacity:0.9; }
+  .btn-save:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-clear { background:#e2e8f0; color:var(--dark); border:none; border-radius:8px; padding:0.6rem 1.2rem; font-family:'Inter',sans-serif; font-size:0.85rem; font-weight:600; cursor:pointer; transition:background 0.2s; }
+  .btn-clear:hover { background:#cbd5e1; }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:1.5rem; right:1.5rem; padding:0.75rem 1.25rem; border-radius:10px; font-size:0.82rem; font-weight:600; color:white; z-index:9999; box-shadow:var(--shadow-lg); display:none; animation:fadeIn 0.3s; }
+  .toast.success { background:#059669; }
+  .toast.error { background:#dc2626; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  /* RESUMEN MESAS REGISTRADAS */
+  .resumen-bar { background:var(--white); border-radius:10px; padding:0.75rem 1rem; margin-bottom:1rem; box-shadow:var(--shadow); display:flex; gap:1rem; align-items:center; flex-wrap:wrap; font-size:0.8rem; }
+  .resumen-item { display:flex; align-items:center; gap:0.35rem; color:var(--gray); }
+  .resumen-item b { color:var(--dark); font-weight:700; }
+  .resumen-dot { width:8px; height:8px; border-radius:50%; }
+  .resumen-dot.ok { background:var(--success); }
+  .resumen-dot.pending { background:#e2e8f0; }
+
+  /* MESA INFO BADGE */
+  .mesa-info { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.5rem 0.85rem; margin-bottom:1rem; font-size:0.78rem; color:var(--primary-light); font-weight:500; display:flex; align-items:center; gap:0.5rem; }
+
+  /* TABLA RESUMEN */
+  .tabla-wrap { overflow-x:auto; }
+  table.resumen { width:100%; border-collapse:collapse; font-size:0.78rem; }
+  table.resumen th { background:var(--gradient); color:white; padding:0.5rem 0.65rem; text-align:left; font-weight:600; white-space:nowrap; }
+  table.resumen td { padding:0.45rem 0.65rem; border-bottom:1px solid #e2e8f0; }
+  table.resumen tr:hover td { background:var(--light); }
+  .badge-dif { display:inline-block; padding:0.1rem 0.45rem; border-radius:8px; font-size:0.7rem; font-weight:700; }
+  .badge-dif.neg { background:var(--success-light); color:#059669; }
+  .badge-dif.pos { background:var(--danger-light); color:#dc2626; }
+  .badge-dif.zero { background:#e2e8f0; color:var(--gray); }
+
+  /* NAV TABS */
+  .tabs { display:flex; gap:0.5rem; margin-bottom:1.25rem; border-bottom:2px solid #e2e8f0; padding-bottom:0; }
+  .tab-btn { padding:0.5rem 1rem; border:none; background:none; font-family:'Inter',sans-serif; font-size:0.82rem; font-weight:600; color:var(--gray); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.18s; }
+  .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .tab-pane { display:none; }
+  .tab-pane.active { display:block; }
+
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.4); border-top-color:white; border-radius:50%; animation:spin 0.6s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-content">
+    <div>
+      <h1>Comparacion E-14 vs E-24 &mdash; Antioquia 2026</h1>
+      <div class="header-sub">Digitacion de votos Ahora Colombia &middot; Camara y Senado</div>
+    </div>
+    <div class="header-badge">MIRA &middot; InfoMIRA</div>
+  </div>
+</header>
+
+<div id="toast" class="toast"></div>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('tab-digitar')">Digitar votos</button>
+    <button class="tab-btn" onclick="showTab('tab-resumen')">Resumen registrado</button>
+  </div>
+
+  <!-- ===== TAB: DIGITAR ===== -->
+  <div id="tab-digitar" class="tab-pane active">
+
+    <!-- PASO 1: MUNICIPIO -->
+    <div class="card">
+      <div class="card-label">Paso 1</div>
+      <div class="card-title">Seleccione el municipio</div>
+      <input class="search-input" type="text" id="mun-search" placeholder="Buscar municipio..." oninput="filtrarMunicipios()">
+      <div class="btn-grid" id="mun-grid"></div>
+    </div>
+
+    <!-- PASO 2: ZONA / PUESTO / MESA -->
+    <div class="card" id="card-seleccion" style="display:none">
+      <div class="card-label">Paso 2</div>
+      <div class="card-title" id="titulo-seleccion">Seleccione zona, puesto y mesa</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Zona</label>
+          <select id="sel-zona" onchange="onZonaChange()">
+            <option value="">-- Zona --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Puesto de votacion</label>
+          <select id="sel-puesto" onchange="onPuestoChange()" disabled>
+            <option value="">-- Puesto --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Mesa</label>
+          <select id="sel-mesa" onchange="onMesaChange()" disabled>
+            <option value="">-- Mesa --</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 3: DIGITAR VOTOS -->
+    <div class="votos-panel" id="votos-panel">
+      <div class="card">
+        <div class="card-label">Paso 3</div>
+        <div class="card-title">Digitar votos Ahora Colombia</div>
+
+        <div class="mesa-info" id="mesa-info-label"></div>
+
+        <div class="votos-grid">
+          <!-- E-14 -->
+          <div class="votos-card">
+            <div class="votos-card-title e14">
+              <span class="tag">E-14</span>
+              Acta de escrutinio (conteo oficial)
+            </div>
+            <div class="voto-field">
+              <span class="voto-label">Camara</span>
+              <input class="voto-input" type="number" id="e14-camara" min="0" placeholder="0" oninput="calcDif()">
+            </div>
+            <div class="voto-field">
+              <span class="voto-label">Senado</span>
+              <input class="voto-input" type="number" id="e14-senado" min="0" placeholder="0" oninput="calcDif()">
+            </div>
+          </div>
+
+          <!-- E-24 -->
+          <div class="votos-card">
+            <div class="votos-card-title e24">
+              <span class="tag">E-24</span>
+              Acta de mesa (conteo testigo)
+            </div>
+            <div class="voto-field">
+              <span class="voto-label">Camara</span>
+              <input class="voto-input" type="number" id="e24-camara" min="0" placeholder="0" oninput="calcDif()">
+            </div>
+            <div class="voto-field">
+              <span class="voto-label">Senado</span>
+              <input class="voto-input" type="number" id="e24-senado" min="0" placeholder="0" oninput="calcDif()">
+            </div>
+          </div>
+        </div>
+
+        <!-- DIFERENCIAS -->
+        <div class="dif-grid">
+          <div class="dif-card camara">
+            <div class="dif-titulo">Diferencia Camara (E-14 - E-24)</div>
+            <div class="dif-val dif-zero" id="dif-camara">—</div>
+          </div>
+          <div class="dif-card senado">
+            <div class="dif-titulo">Diferencia Senado (E-14 - E-24)</div>
+            <div class="dif-val dif-zero" id="dif-senado">—</div>
+          </div>
+        </div>
+
+        <!-- OBSERVACION Y USUARIO -->
+        <div class="form-row" style="margin-bottom:1rem">
+          <div class="form-group" style="flex:2">
+            <label>Observacion (opcional)</label>
+            <input type="text" id="observacion" placeholder="Ej: acta con tachadura en camara">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Tu nombre</label>
+            <input type="text" id="usuario" placeholder="Nombre quien digita">
+          </div>
+        </div>
+
+        <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+          <button class="btn-save" id="btn-guardar" onclick="guardar()">
+            <span id="save-icon">&#128190;</span> Guardar
+          </button>
+          <button class="btn-clear" onclick="limpiarVotos()">Limpiar</button>
+          <span id="estado-guardado" style="font-size:0.75rem; color:var(--gray);"></span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-digitar -->
+
+  <!-- ===== TAB: RESUMEN ===== -->
+  <div id="tab-resumen" class="tab-pane">
+    <div class="card">
+      <div class="card-title">Mesas registradas</div>
+      <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
+        <input class="search-input" type="text" id="resumen-search" placeholder="Filtrar por municipio..." oninput="filtrarResumen()" style="max-width:280px;">
+        <button class="btn-save" onclick="cargarResumen()" style="padding:0.5rem 1rem; font-size:0.8rem;">
+          &#x21BB; Actualizar
+        </button>
+      </div>
+      <div id="resumen-contenido">
+        <div style="color:var(--gray); font-size:0.85rem;">Haz clic en "Actualizar" para cargar el resumen.</div>
+      </div>
+    </div>
+  </div><!-- /tab-resumen -->
+
+</div><!-- /container -->
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const API_URL = window.location.origin;
+
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+let ESTRUCTURA = null;
+let munActual = null;
+let zonaActual = null;
+let codPuestoActual = null;
+let nomPuestoActual = null;
+let mesaActual = null;
+let resumenData = [];
+
+// ── CARGAR ESTRUCTURA JSON ────────────────────────────────────────────────────
+fetch("estructura.json")
+  .then(r => r.json())
+  .then(data => {
+    ESTRUCTURA = data;
+    renderMunicipios();
+  })
+  .catch(() => showToast("Error cargando estructura de municipios", "error"));
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll(".tab-btn").forEach((b,i) => {
+    const panes = document.querySelectorAll(".tab-pane");
+    b.classList.toggle("active", "tab-" + b.textContent.trim().toLowerCase().split(" ")[0] === id || panes[i] && panes[i].id === id);
+  });
+  document.querySelectorAll(".tab-pane").forEach(p => p.classList.toggle("active", p.id === id));
+  // fix: recompute active tab button
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  const pane = document.getElementById(id);
+  if (pane) {
+    const idx = Array.from(document.querySelectorAll(".tab-pane")).indexOf(pane);
+    const btns = document.querySelectorAll(".tab-btn");
+    if (btns[idx]) btns[idx].classList.add("active");
+  }
+  if (id === "tab-resumen") cargarResumen();
+}
+
+// ── MUNICIPIOS ────────────────────────────────────────────────────────────────
+function renderMunicipios() {
+  const grid = document.getElementById("mun-grid");
+  grid.innerHTML = "";
+  const q = document.getElementById("mun-search").value.toLowerCase().trim();
+  const muns = Object.keys(ESTRUCTURA).sort();
+  muns.forEach(m => {
+    if (q && !m.toLowerCase().includes(q)) return;
+    const btn = document.createElement("button");
+    btn.className = "btn-mun" + (m === munActual ? " active" : "");
+    btn.textContent = m;
+    btn.onclick = () => seleccionarMun(m);
+    grid.appendChild(btn);
+  });
+}
+
+function filtrarMunicipios() { renderMunicipios(); }
+
+function seleccionarMun(mun) {
+  munActual = mun;
+  zonaActual = null; codPuestoActual = null; nomPuestoActual = null; mesaActual = null;
+  renderMunicipios();
+
+  // Mostrar card seleccion
+  document.getElementById("card-seleccion").style.display = "block";
+  document.getElementById("titulo-seleccion").textContent = mun + " — Zona, puesto y mesa";
+  document.getElementById("votos-panel").classList.remove("visible");
+
+  // Llenar zonas
+  const selZona = document.getElementById("sel-zona");
+  selZona.innerHTML = '<option value="">-- Zona --</option>';
+  const zonas = Object.keys(ESTRUCTURA[mun]).sort((a,b) => parseInt(a)-parseInt(b));
+  zonas.forEach(z => {
+    const opt = document.createElement("option");
+    opt.value = z;
+    opt.textContent = "Zona " + z;
+    selZona.appendChild(opt);
+  });
+  selZona.disabled = false;
+
+  const selPuesto = document.getElementById("sel-puesto");
+  selPuesto.innerHTML = '<option value="">-- Puesto --</option>';
+  selPuesto.disabled = true;
+
+  const selMesa = document.getElementById("sel-mesa");
+  selMesa.innerHTML = '<option value="">-- Mesa --</option>';
+  selMesa.disabled = true;
+
+  document.getElementById("card-seleccion").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function onZonaChange() {
+  const z = document.getElementById("sel-zona").value;
+  zonaActual = z ? parseInt(z) : null;
+  codPuestoActual = null; nomPuestoActual = null; mesaActual = null;
+  document.getElementById("votos-panel").classList.remove("visible");
+
+  const selPuesto = document.getElementById("sel-puesto");
+  selPuesto.innerHTML = '<option value="">-- Puesto --</option>';
+  selPuesto.disabled = true;
+  const selMesa = document.getElementById("sel-mesa");
+  selMesa.innerHTML = '<option value="">-- Mesa --</option>';
+  selMesa.disabled = true;
+
+  if (!z || !munActual) return;
+
+  const puestos = ESTRUCTURA[munActual][z];
+  const codigos = Object.keys(puestos).sort((a,b) => parseInt(a)-parseInt(b));
+  codigos.forEach(cod => {
+    const opt = document.createElement("option");
+    opt.value = cod;
+    opt.textContent = cod + " — " + puestos[cod].nom;
+    selPuesto.appendChild(opt);
+  });
+  selPuesto.disabled = false;
+}
+
+function onPuestoChange() {
+  const cod = document.getElementById("sel-puesto").value;
+  codPuestoActual = cod ? parseInt(cod) : null;
+  nomPuestoActual = null;
+  mesaActual = null;
+  document.getElementById("votos-panel").classList.remove("visible");
+
+  const selMesa = document.getElementById("sel-mesa");
+  selMesa.innerHTML = '<option value="">-- Mesa --</option>';
+  selMesa.disabled = true;
+
+  if (!cod || !munActual || zonaActual === null) return;
+
+  const puestoData = ESTRUCTURA[munActual][String(zonaActual)][cod];
+  nomPuestoActual = puestoData.nom;
+  puestoData.mesas.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = "Mesa " + m;
+    selMesa.appendChild(opt);
+  });
+  selMesa.disabled = false;
+}
+
+function onMesaChange() {
+  const m = document.getElementById("sel-mesa").value;
+  mesaActual = m ? parseInt(m) : null;
+  if (!mesaActual) { document.getElementById("votos-panel").classList.remove("visible"); return; }
+
+  // Mostrar panel votos
+  document.getElementById("votos-panel").classList.add("visible");
+  document.getElementById("mesa-info-label").textContent =
+    munActual + " | Zona " + zonaActual + " | " + nomPuestoActual + " | Mesa " + mesaActual;
+
+  // Limpiar campos
+  limpiarVotos();
+  document.getElementById("estado-guardado").textContent = "";
+
+  // Cargar datos existentes
+  cargarVotosExistentes();
+  document.getElementById("votos-panel").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+// ── VOTOS ─────────────────────────────────────────────────────────────────────
+function cargarVotosExistentes() {
+  if (!munActual || zonaActual === null || codPuestoActual === null || !mesaActual) return;
+  const url = `${API_URL}/votos?municipio=${encodeURIComponent(munActual)}&zona=${zonaActual}&cod_puesto=${codPuestoActual}&mesa=${mesaActual}`;
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.id) {
+        document.getElementById("e14-camara").value = data.e14_ahora_camara || 0;
+        document.getElementById("e14-senado").value  = data.e14_ahora_senado || 0;
+        document.getElementById("e24-camara").value  = data.e24_ahora_camara || 0;
+        document.getElementById("e24-senado").value  = data.e24_ahora_senado || 0;
+        document.getElementById("observacion").value = data.observacion || "";
+        document.getElementById("usuario").value     = data.usuario || "";
+        const d = new Date(data.fecha_actualizacion);
+        document.getElementById("estado-guardado").textContent =
+          "Guardado el " + d.toLocaleDateString("es-CO") + " " + d.toLocaleTimeString("es-CO", {hour:"2-digit",minute:"2-digit"});
+        calcDif();
+      }
+    })
+    .catch(() => {});
+}
+
+function calcDif() {
+  const e14c = parseInt(document.getElementById("e14-camara").value) || 0;
+  const e14s = parseInt(document.getElementById("e14-senado").value) || 0;
+  const e24c = parseInt(document.getElementById("e24-camara").value) || 0;
+  const e24s = parseInt(document.getElementById("e24-senado").value) || 0;
+
+  const dc = e14c - e24c;
+  const ds = e14s - e24s;
+
+  const elDc = document.getElementById("dif-camara");
+  const elDs = document.getElementById("dif-senado");
+
+  elDc.textContent = (dc > 0 ? "+" : "") + dc.toLocaleString();
+  elDc.className = "dif-val " + (dc > 0 ? "dif-pos" : dc < 0 ? "dif-neg" : "dif-zero");
+
+  elDs.textContent = (ds > 0 ? "+" : "") + ds.toLocaleString();
+  elDs.className = "dif-val " + (ds > 0 ? "dif-pos" : ds < 0 ? "dif-neg" : "dif-zero");
+}
+
+function limpiarVotos() {
+  ["e14-camara","e14-senado","e24-camara","e24-senado"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("dif-camara").textContent = "—";
+  document.getElementById("dif-camara").className = "dif-val dif-zero";
+  document.getElementById("dif-senado").textContent = "—";
+  document.getElementById("dif-senado").className = "dif-val dif-zero";
+}
+
+function guardar() {
+  if (!munActual || zonaActual === null || codPuestoActual === null || !mesaActual) {
+    showToast("Seleccione municipio, zona, puesto y mesa primero", "error");
+    return;
+  }
+  const payload = {
+    municipio:       munActual,
+    zona:            zonaActual,
+    cod_puesto:      codPuestoActual,
+    nom_puesto:      nomPuestoActual,
+    mesa:            mesaActual,
+    e14_ahora_camara: parseInt(document.getElementById("e14-camara").value) || 0,
+    e14_ahora_senado: parseInt(document.getElementById("e14-senado").value) || 0,
+    e24_ahora_camara: parseInt(document.getElementById("e24-camara").value) || 0,
+    e24_ahora_senado: parseInt(document.getElementById("e24-senado").value) || 0,
+    observacion:     document.getElementById("observacion").value.trim(),
+    usuario:         document.getElementById("usuario").value.trim(),
+  };
+
+  const btn = document.getElementById("btn-guardar");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Guardando...';
+
+  fetch(`${API_URL}/votos`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.innerHTML = "&#128190; Guardar";
+    if (data.ok) {
+      showToast("Guardado correctamente", "success");
+      const ahora = new Date();
+      document.getElementById("estado-guardado").textContent =
+        "Guardado " + ahora.toLocaleTimeString("es-CO", {hour:"2-digit",minute:"2-digit"});
+    } else {
+      showToast("Error: " + (data.error || "intenta de nuevo"), "error");
+    }
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.innerHTML = "&#128190; Guardar";
+    showToast("Error de conexion con el servidor", "error");
+  });
+}
+
+// ── RESUMEN ───────────────────────────────────────────────────────────────────
+function cargarResumen() {
+  const cont = document.getElementById("resumen-contenido");
+  cont.innerHTML = '<div style="color:var(--gray);font-size:0.85rem;">Cargando...</div>';
+  fetch(`${API_URL}/resumen`)
+    .then(r => r.json())
+    .then(data => {
+      resumenData = data;
+      renderResumen();
+    })
+    .catch(() => {
+      cont.innerHTML = '<div style="color:#dc2626;font-size:0.85rem;">Error al cargar el resumen.</div>';
+    });
+}
+
+function filtrarResumen() {
+  renderResumen();
+}
+
+function renderResumen() {
+  const q = document.getElementById("resumen-search").value.toLowerCase().trim();
+  const filtered = resumenData.filter(r => !q || r.municipio.toLowerCase().includes(q));
+  const cont = document.getElementById("resumen-contenido");
+
+  if (!filtered.length) {
+    cont.innerHTML = '<div style="color:var(--gray);font-size:0.85rem;">No hay registros aun.</div>';
+    return;
+  }
+
+  let html = `<div class="tabla-wrap"><table class="resumen">
+    <thead><tr>
+      <th>Municipio</th>
+      <th>Mesas</th>
+      <th>E-14 Camara</th>
+      <th>E-24 Camara</th>
+      <th>Dif Camara</th>
+      <th>E-14 Senado</th>
+      <th>E-24 Senado</th>
+      <th>Dif Senado</th>
+    </tr></thead><tbody>`;
+
+  filtered.forEach(r => {
+    const dc = (r.total_e14_camara||0) - (r.total_e24_camara||0);
+    const ds = (r.total_e14_senado||0) - (r.total_e24_senado||0);
+    const clsDc = dc > 0 ? "pos" : dc < 0 ? "neg" : "zero";
+    const clsDs = ds > 0 ? "pos" : ds < 0 ? "neg" : "zero";
+    html += `<tr>
+      <td><b>${r.municipio}</b></td>
+      <td style="text-align:center">${r.mesas_registradas}</td>
+      <td style="text-align:right">${(r.total_e14_camara||0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.total_e24_camara||0).toLocaleString()}</td>
+      <td style="text-align:center"><span class="badge-dif ${clsDc}">${dc>0?"+":""}${dc.toLocaleString()}</span></td>
+      <td style="text-align:right">${(r.total_e14_senado||0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.total_e24_senado||0).toLocaleString()}</td>
+      <td style="text-align:center"><span class="badge-dif ${clsDs}">${ds>0?"+":""}${ds.toLocaleString()}</span></td>
+    </tr>`;
+  });
+
+  // Totales
+  const totE14c = filtered.reduce((s,r) => s+(r.total_e14_camara||0), 0);
+  const totE24c = filtered.reduce((s,r) => s+(r.total_e24_camara||0), 0);
+  const totE14s = filtered.reduce((s,r) => s+(r.total_e14_senado||0), 0);
+  const totE24s = filtered.reduce((s,r) => s+(r.total_e24_senado||0), 0);
+  const totDc = totE14c - totE24c;
+  const totDs = totE14s - totE24s;
+  const totMesas = filtered.reduce((s,r) => s+(parseInt(r.mesas_registradas)||0), 0);
+
+  html += `<tr style="background:#eff6ff;font-weight:700;border-top:2px solid var(--primary-light)">
+    <td>TOTAL (${filtered.length} municipios)</td>
+    <td style="text-align:center">${totMesas}</td>
+    <td style="text-align:right">${totE14c.toLocaleString()}</td>
+    <td style="text-align:right">${totE24c.toLocaleString()}</td>
+    <td style="text-align:center"><span class="badge-dif ${totDc>0?"pos":totDc<0?"neg":"zero"}">${totDc>0?"+":""}${totDc.toLocaleString()}</span></td>
+    <td style="text-align:right">${totE14s.toLocaleString()}</td>
+    <td style="text-align:right">${totE24s.toLocaleString()}</td>
+    <td style="text-align:center"><span class="badge-dif ${totDs>0?"pos":totDs<0?"neg":"zero"}">${totDs>0?"+":""}${totDs.toLocaleString()}</span></td>
+  </tr>`;
+
+  html += "</tbody></table></div>";
+  cont.innerHTML = html;
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type="success") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast " + type;
+  t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 3000);
+}
+
+// Ping para mantener la API despierta en Render free tier
+setInterval(() => fetch(API_URL + "/health").catch(() => {}), 4 * 60 * 1000);
+</script>
+</body>
+</html>
