@@ -227,10 +227,6 @@
               <span class="voto-label">Camara</span>
               <input class="voto-input" type="number" id="e14-camara" min="0" placeholder="0" oninput="calcDif()">
             </div>
-            <div class="voto-field">
-              <span class="voto-label">Senado</span>
-              <input class="voto-input" type="number" id="e14-senado" min="0" placeholder="0" oninput="calcDif()">
-            </div>
           </div>
 
           <!-- E-24 -->
@@ -242,22 +238,14 @@
               <span class="voto-label">Camara</span>
               <input class="voto-input" type="number" id="e24-camara" min="0" placeholder="0" oninput="calcDif()">
             </div>
-            <div class="voto-field">
-              <span class="voto-label">Senado</span>
-              <input class="voto-input" type="number" id="e24-senado" min="0" placeholder="0" oninput="calcDif()">
-            </div>
           </div>
         </div>
 
         <!-- DIFERENCIAS -->
-        <div class="dif-grid">
+        <div class="dif-grid" style="grid-template-columns:1fr">
           <div class="dif-card camara">
             <div class="dif-titulo">Diferencia Camara (E-14 - E-24)</div>
             <div class="dif-val dif-zero" id="dif-camara">—</div>
-          </div>
-          <div class="dif-card senado">
-            <div class="dif-titulo">Diferencia Senado (E-14 - E-24)</div>
-            <div class="dif-val dif-zero" id="dif-senado">—</div>
           </div>
         </div>
 
@@ -472,9 +460,7 @@ function cargarVotosExistentes() {
     .then(data => {
       if (data && data.id) {
         document.getElementById("e14-camara").value = data.e14_ahora_camara || 0;
-        document.getElementById("e14-senado").value  = data.e14_ahora_senado || 0;
-        document.getElementById("e24-camara").value  = data.e24_ahora_camara || 0;
-        document.getElementById("e24-senado").value  = data.e24_ahora_senado || 0;
+        document.getElementById("e24-camara").value = data.e24_ahora_camara || 0;
         document.getElementById("observacion").value = data.observacion || "";
         document.getElementById("usuario").value     = data.usuario || "";
         const d = new Date(data.fecha_actualizacion);
@@ -488,31 +474,19 @@ function cargarVotosExistentes() {
 
 function calcDif() {
   const e14c = parseInt(document.getElementById("e14-camara").value) || 0;
-  const e14s = parseInt(document.getElementById("e14-senado").value) || 0;
   const e24c = parseInt(document.getElementById("e24-camara").value) || 0;
-  const e24s = parseInt(document.getElementById("e24-senado").value) || 0;
-
   const dc = e14c - e24c;
-  const ds = e14s - e24s;
-
   const elDc = document.getElementById("dif-camara");
-  const elDs = document.getElementById("dif-senado");
-
   elDc.textContent = (dc > 0 ? "+" : "") + dc.toLocaleString();
   elDc.className = "dif-val " + (dc > 0 ? "dif-pos" : dc < 0 ? "dif-neg" : "dif-zero");
-
-  elDs.textContent = (ds > 0 ? "+" : "") + ds.toLocaleString();
-  elDs.className = "dif-val " + (ds > 0 ? "dif-pos" : ds < 0 ? "dif-neg" : "dif-zero");
 }
 
 function limpiarVotos() {
-  ["e14-camara","e14-senado","e24-camara","e24-senado"].forEach(id => {
+  ["e14-camara","e24-camara"].forEach(id => {
     document.getElementById(id).value = "";
   });
   document.getElementById("dif-camara").textContent = "—";
   document.getElementById("dif-camara").className = "dif-val dif-zero";
-  document.getElementById("dif-senado").textContent = "—";
-  document.getElementById("dif-senado").className = "dif-val dif-zero";
 }
 
 function guardar() {
@@ -527,9 +501,7 @@ function guardar() {
     nom_puesto:      nomPuestoActual,
     mesa:            mesaActual,
     e14_ahora_camara: parseInt(document.getElementById("e14-camara").value) || 0,
-    e14_ahora_senado: parseInt(document.getElementById("e14-senado").value) || 0,
     e24_ahora_camara: parseInt(document.getElementById("e24-camara").value) || 0,
-    e24_ahora_senado: parseInt(document.getElementById("e24-senado").value) || 0,
     observacion:     document.getElementById("observacion").value.trim(),
     usuario:         document.getElementById("usuario").value.trim(),
   };
@@ -598,36 +570,25 @@ function renderResumen() {
       <th>Mesas</th>
       <th>E-14 Camara</th>
       <th>E-24 Camara</th>
-      <th>Dif Camara</th>
-      <th>E-14 Senado</th>
-      <th>E-24 Senado</th>
-      <th>Dif Senado</th>
+      <th>Diferencia</th>
     </tr></thead><tbody>`;
 
   filtered.forEach(r => {
     const dc = (r.total_e14_camara||0) - (r.total_e24_camara||0);
-    const ds = (r.total_e14_senado||0) - (r.total_e24_senado||0);
     const clsDc = dc > 0 ? "pos" : dc < 0 ? "neg" : "zero";
-    const clsDs = ds > 0 ? "pos" : ds < 0 ? "neg" : "zero";
     html += `<tr>
       <td><b>${r.municipio}</b></td>
       <td style="text-align:center">${r.mesas_registradas}</td>
       <td style="text-align:right">${(r.total_e14_camara||0).toLocaleString()}</td>
       <td style="text-align:right">${(r.total_e24_camara||0).toLocaleString()}</td>
       <td style="text-align:center"><span class="badge-dif ${clsDc}">${dc>0?"+":""}${dc.toLocaleString()}</span></td>
-      <td style="text-align:right">${(r.total_e14_senado||0).toLocaleString()}</td>
-      <td style="text-align:right">${(r.total_e24_senado||0).toLocaleString()}</td>
-      <td style="text-align:center"><span class="badge-dif ${clsDs}">${ds>0?"+":""}${ds.toLocaleString()}</span></td>
     </tr>`;
   });
 
   // Totales
   const totE14c = filtered.reduce((s,r) => s+(r.total_e14_camara||0), 0);
   const totE24c = filtered.reduce((s,r) => s+(r.total_e24_camara||0), 0);
-  const totE14s = filtered.reduce((s,r) => s+(r.total_e14_senado||0), 0);
-  const totE24s = filtered.reduce((s,r) => s+(r.total_e24_senado||0), 0);
   const totDc = totE14c - totE24c;
-  const totDs = totE14s - totE24s;
   const totMesas = filtered.reduce((s,r) => s+(parseInt(r.mesas_registradas)||0), 0);
 
   html += `<tr style="background:#eff6ff;font-weight:700;border-top:2px solid var(--primary-light)">
@@ -636,9 +597,6 @@ function renderResumen() {
     <td style="text-align:right">${totE14c.toLocaleString()}</td>
     <td style="text-align:right">${totE24c.toLocaleString()}</td>
     <td style="text-align:center"><span class="badge-dif ${totDc>0?"pos":totDc<0?"neg":"zero"}">${totDc>0?"+":""}${totDc.toLocaleString()}</span></td>
-    <td style="text-align:right">${totE14s.toLocaleString()}</td>
-    <td style="text-align:right">${totE24s.toLocaleString()}</td>
-    <td style="text-align:center"><span class="badge-dif ${totDs>0?"pos":totDs<0?"neg":"zero"}">${totDs>0?"+":""}${totDs.toLocaleString()}</span></td>
   </tr>`;
 
   html += "</tbody></table></div>";
