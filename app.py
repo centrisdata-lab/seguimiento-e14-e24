@@ -25,11 +25,12 @@ def init_db():
                     zona INTEGER NOT NULL,
                     cod_puesto INTEGER NOT NULL,
                     nom_puesto TEXT,
+                    comision TEXT DEFAULT '',
                     mesa INTEGER NOT NULL,
-                    e14_ahora_camara INTEGER DEFAULT 0,
-                    e14_ahora_senado INTEGER DEFAULT 0,
-                    e24_ahora_camara INTEGER DEFAULT 0,
-                    e24_ahora_senado INTEGER DEFAULT 0,
+                    e14_ahora INTEGER DEFAULT 0,
+                    e14_conservador INTEGER DEFAULT 0,
+                    e24_ahora INTEGER DEFAULT 0,
+                    e24_conservador INTEGER DEFAULT 0,
                     observacion TEXT DEFAULT '',
                     usuario TEXT DEFAULT '',
                     fecha_registro TIMESTAMP DEFAULT NOW(),
@@ -37,10 +38,35 @@ def init_db():
                     UNIQUE(municipio, zona, cod_puesto, mesa)
                 )
             """)
+            # Migrar columnas antiguas si existen
+            cur.execute("""
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='votos' AND column_name='e14_ahora_camara') THEN
+                        ALTER TABLE votos RENAME COLUMN e14_ahora_camara TO e14_ahora;
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='votos' AND column_name='e24_ahora_camara') THEN
+                        ALTER TABLE votos RENAME COLUMN e24_ahora_camara TO e24_ahora;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                                   WHERE table_name='votos' AND column_name='e14_conservador') THEN
+                        ALTER TABLE votos ADD COLUMN e14_conservador INTEGER DEFAULT 0;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                                   WHERE table_name='votos' AND column_name='e24_conservador') THEN
+                        ALTER TABLE votos ADD COLUMN e24_conservador INTEGER DEFAULT 0;
+                    END IF;
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                                   WHERE table_name='votos' AND column_name='comision') THEN
+                        ALTER TABLE votos ADD COLUMN comision TEXT DEFAULT '';
+                    END IF;
+                END $$;
+            """)
         conn.commit()
 
 
-# Inicializar DB al arrancar
 try:
     init_db()
     print("DB inicializada OK")
@@ -66,10 +92,10 @@ def health():
 # ── Obtener votos de una mesa ──────────────────────────────────────────────────
 @app.route("/votos", methods=["GET"])
 def get_votos():
-    municipio = request.args.get("municipio", "").strip().upper()
-    zona = request.args.get("zona", type=int)
+    municipio  = request.args.get("municipio", "").strip().upper()
+    zona       = request.args.get("zona", type=int)
     cod_puesto = request.args.get("cod_puesto", type=int)
-    mesa = request.args.get("mesa", type=int)
+    mesa       = request.args.get("mesa", type=int)
 
     if not municipio or zona is None or cod_puesto is None or mesa is None:
         return jsonify({"error": "Faltan parametros"}), 400
@@ -82,9 +108,7 @@ def get_votos():
                     WHERE municipio=%s AND zona=%s AND cod_puesto=%s AND mesa=%s
                 """, (municipio, zona, cod_puesto, mesa))
                 row = cur.fetchone()
-        if row:
-            return jsonify(dict(row))
-        return jsonify({})
+        return jsonify(dict(row) if row else {})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -93,17 +117,18 @@ def get_votos():
 @app.route("/votos", methods=["POST"])
 def save_votos():
     body = request.get_json(force=True) or {}
-    municipio   = str(body.get("municipio", "")).strip().upper()
-    zona        = body.get("zona")
-    cod_puesto  = body.get("cod_puesto")
-    nom_puesto  = str(body.get("nom_puesto", "")).strip()
-    mesa        = body.get("mesa")
-    e14_camara  = int(body.get("e14_ahora_camara") or 0)
-    e14_senado  = int(body.get("e14_ahora_senado") or 0)
-    e24_camara  = int(body.get("e24_ahora_camara") or 0)
-    e24_senado  = int(body.get("e24_ahora_senado") or 0)
-    observacion = str(body.get("observacion", "")).strip()
-    usuario     = str(body.get("usuario", "")).strip()
+    municipio      = str(body.get("municipio", "")).strip().upper()
+    zona           = body.get("zona")
+    cod_puesto     = body.get("cod_puesto")
+    nom_puesto     = str(body.get("nom_puesto", "")).strip()
+    comision       = str(body.get("comision", "")).strip()
+    mesa           = body.get("mesa")
+    e14_ahora      = int(body.get("e14_ahora") or 0)
+    e14_conservador = int(body.get("e14_conservador") or 0)
+    e24_ahora      = int(body.get("e24_ahora") or 0)
+    e24_conservador = int(body.get("e24_conservador") or 0)
+    observacion    = str(body.get("observacion", "")).strip()
+    usuario        = str(body.get("usuario", "")).strip()
 
     if not municipio or zona is None or cod_puesto is None or mesa is None:
         return jsonify({"error": "Faltan campos obligatorios"}), 400
@@ -113,23 +138,23 @@ def save_votos():
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO votos
-                        (municipio, zona, cod_puesto, nom_puesto, mesa,
-                         e14_ahora_camara, e14_ahora_senado,
-                         e24_ahora_camara, e24_ahora_senado,
+                        (municipio, zona, cod_puesto, nom_puesto, comision, mesa,
+                         e14_ahora, e14_conservador, e24_ahora, e24_conservador,
                          observacion, usuario, fecha_actualizacion)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
                     ON CONFLICT (municipio, zona, cod_puesto, mesa)
                     DO UPDATE SET
-                        e14_ahora_camara   = EXCLUDED.e14_ahora_camara,
-                        e14_ahora_senado   = EXCLUDED.e14_ahora_senado,
-                        e24_ahora_camara   = EXCLUDED.e24_ahora_camara,
-                        e24_ahora_senado   = EXCLUDED.e24_ahora_senado,
-                        observacion        = EXCLUDED.observacion,
-                        usuario            = EXCLUDED.usuario,
+                        e14_ahora        = EXCLUDED.e14_ahora,
+                        e14_conservador  = EXCLUDED.e14_conservador,
+                        e24_ahora        = EXCLUDED.e24_ahora,
+                        e24_conservador  = EXCLUDED.e24_conservador,
+                        comision         = EXCLUDED.comision,
+                        observacion      = EXCLUDED.observacion,
+                        usuario          = EXCLUDED.usuario,
                         fecha_actualizacion = NOW()
                     RETURNING *
-                """, (municipio, zona, cod_puesto, nom_puesto, mesa,
-                      e14_camara, e14_senado, e24_camara, e24_senado,
+                """, (municipio, zona, cod_puesto, nom_puesto, comision, mesa,
+                      e14_ahora, e14_conservador, e24_ahora, e24_conservador,
                       observacion, usuario))
                 row = cur.fetchone()
             conn.commit()
@@ -138,46 +163,55 @@ def save_votos():
         return jsonify({"error": str(e)}), 500
 
 
-# ── Listar todos los votos registrados (para resumen) ─────────────────────────
-@app.route("/votos/todos", methods=["GET"])
-def get_todos():
-    municipio = request.args.get("municipio", "").strip().upper()
-    try:
-        with get_conn() as conn:
-            with conn.cursor() as cur:
-                if municipio:
-                    cur.execute("""
-                        SELECT * FROM votos WHERE municipio=%s
-                        ORDER BY zona, cod_puesto, mesa
-                    """, (municipio,))
-                else:
-                    cur.execute("""
-                        SELECT * FROM votos ORDER BY municipio, zona, cod_puesto, mesa
-                    """)
-                rows = cur.fetchall()
-        return jsonify([dict(r) for r in rows])
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ── Resumen por municipio ──────────────────────────────────────────────────────
+# ── Resumen agrupado (por municipio / comision / puesto) ──────────────────────
 @app.route("/resumen", methods=["GET"])
 def get_resumen():
+    nivel = request.args.get("nivel", "municipio")  # municipio | comision | puesto
+    municipio = request.args.get("municipio", "").strip().upper()
+    comision  = request.args.get("comision", "").strip().upper()
+
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT
-                        municipio,
-                        COUNT(*) AS mesas_registradas,
-                        SUM(e14_ahora_camara) AS total_e14_camara,
-                        SUM(e14_ahora_senado) AS total_e14_senado,
-                        SUM(e24_ahora_camara) AS total_e24_camara,
-                        SUM(e24_ahora_senado) AS total_e24_senado
-                    FROM votos
-                    GROUP BY municipio
-                    ORDER BY municipio
-                """)
+                if nivel == "puesto":
+                    cur.execute("""
+                        SELECT municipio, comision, nom_puesto,
+                               COUNT(*) AS mesas_registradas,
+                               SUM(e14_ahora) AS total_e14_ahora,
+                               SUM(e14_conservador) AS total_e14_conservador,
+                               SUM(e24_ahora) AS total_e24_ahora,
+                               SUM(e24_conservador) AS total_e24_conservador
+                        FROM votos
+                        WHERE (%s = '' OR UPPER(municipio) = %s)
+                          AND (%s = '' OR UPPER(comision)  = %s)
+                        GROUP BY municipio, comision, nom_puesto
+                        ORDER BY municipio, comision, nom_puesto
+                    """, (municipio, municipio, comision, comision))
+                elif nivel == "comision":
+                    cur.execute("""
+                        SELECT municipio, comision,
+                               COUNT(*) AS mesas_registradas,
+                               SUM(e14_ahora) AS total_e14_ahora,
+                               SUM(e14_conservador) AS total_e14_conservador,
+                               SUM(e24_ahora) AS total_e24_ahora,
+                               SUM(e24_conservador) AS total_e24_conservador
+                        FROM votos
+                        WHERE (%s = '' OR UPPER(municipio) = %s)
+                        GROUP BY municipio, comision
+                        ORDER BY municipio, comision
+                    """, (municipio, municipio))
+                else:  # municipio
+                    cur.execute("""
+                        SELECT municipio,
+                               COUNT(*) AS mesas_registradas,
+                               SUM(e14_ahora) AS total_e14_ahora,
+                               SUM(e14_conservador) AS total_e14_conservador,
+                               SUM(e24_ahora) AS total_e24_ahora,
+                               SUM(e24_conservador) AS total_e24_conservador
+                        FROM votos
+                        GROUP BY municipio
+                        ORDER BY municipio
+                    """)
                 rows = cur.fetchall()
         return jsonify([dict(r) for r in rows])
     except Exception as e:
