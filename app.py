@@ -53,6 +53,11 @@ def index():
     return send_from_directory(".", "index.html")
 
 
+@app.route("/estructura.json")
+def estructura():
+    return send_from_directory(".", "estructura.json")
+
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "time": datetime.now().isoformat()})
