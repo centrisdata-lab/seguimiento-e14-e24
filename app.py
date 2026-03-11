@@ -368,6 +368,52 @@ def get_cobertura():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Faltantes: mesas/municipios sin datos por formato ────────────────────────
+@app.route("/faltantes", methods=["GET"])
+def get_faltantes():
+    import json, os
+    fmt = request.args.get("fmt", "e14")  # e14 | e24 | e26
+    try:
+        # Leer estructura
+        est_path = os.path.join(os.path.dirname(__file__), "estructura.json")
+        with open(est_path, encoding="utf-8") as f:
+            estructura = json.load(f)
+
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                if fmt == "e26":
+                    cur.execute("SELECT UPPER(municipio) AS municipio FROM votos_e26")
+                    registrados = {r["municipio"] for r in cur.fetchall()}
+                    todos = sorted(estructura.keys())
+                    faltantes = [{"municipio": m} for m in todos if m.upper() not in registrados]
+                else:
+                    col = "e14_ahora" if fmt == "e14" else "e24_ahora"
+                    col2 = "e14_conservador" if fmt == "e14" else "e24_conservador"
+                    cur.execute(f"""
+                        SELECT UPPER(municipio) AS municipio, zona, cod_puesto, mesa
+                        FROM votos WHERE {col} > 0 OR {col2} > 0
+                    """)
+                    registrados = {(r["municipio"], r["zona"], r["cod_puesto"], r["mesa"])
+                                   for r in cur.fetchall()}
+                    faltantes = []
+                    for mun, zonas in estructura.items():
+                        for zona, puestos in zonas.items():
+                            for cod, pdata in puestos.items():
+                                for mesa in pdata["mesas"]:
+                                    key = (mun.upper(), int(zona), int(cod), int(mesa))
+                                    if key not in registrados:
+                                        faltantes.append({
+                                            "municipio": mun,
+                                            "zona": int(zona),
+                                            "cod_puesto": int(cod),
+                                            "mesa": int(mesa),
+                                            "comision": pdata.get("comision", "")
+                                        })
+        return jsonify(faltantes)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── Eliminar registro E-14/E-24 de una mesa ───────────────────────────────────
 @app.route("/votos/<int:voto_id>", methods=["DELETE"])
 def delete_voto(voto_id):
