@@ -414,6 +414,43 @@ def get_faltantes():
         return jsonify({"error": str(e)}), 500
 
 
+# ── E-26: Listar todos los registros para control ─────────────────────────────
+@app.route("/votos_e26_control", methods=["GET"])
+def get_votos_e26_control():
+    municipio = request.args.get("municipio", "").strip().upper()
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                if municipio:
+                    cur.execute("""
+                        SELECT * FROM votos_e26
+                        WHERE UPPER(municipio) LIKE %s
+                        ORDER BY municipio
+                    """, (f"%{municipio}%",))
+                else:
+                    cur.execute("SELECT * FROM votos_e26 ORDER BY municipio")
+                rows = cur.fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Eliminar registro E-26 de un municipio ────────────────────────────────────
+@app.route("/votos_e26/<int:voto_id>", methods=["DELETE"])
+def delete_voto_e26(voto_id):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM votos_e26 WHERE id=%s RETURNING id", (voto_id,))
+                row = cur.fetchone()
+            conn.commit()
+        if row:
+            return jsonify({"ok": True})
+        return jsonify({"error": "Registro no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── Eliminar registro E-14/E-24 de una mesa ───────────────────────────────────
 @app.route("/votos/<int:voto_id>", methods=["DELETE"])
 def delete_voto(voto_id):

@@ -433,6 +433,24 @@
         <div style="color:var(--gray); font-size:0.85rem;">Haz clic en Actualizar para ver los registros.</div>
       </div>
     </div>
+
+    <!-- Control E-26 por municipio -->
+    <div class="card" style="margin-top:1.25rem;">
+      <div class="card-title">Control E-26 por municipio</div>
+      <div class="filtros-resumen">
+        <div class="form-group">
+          <label>Filtrar municipio</label>
+          <input type="text" id="ctrl-e26-municipio" placeholder="Todos" oninput="filtrarTablaControlE26()">
+        </div>
+        <div class="form-group" style="flex:none">
+          <label>&nbsp;</label>
+          <button class="btn-save" onclick="cargarControlE26()" style="padding:0.5rem 1rem; font-size:0.8rem;">&#x21BB; Actualizar</button>
+        </div>
+      </div>
+      <div id="control-e26-contenido">
+        <div style="color:var(--gray); font-size:0.85rem;">Haz clic en Actualizar para ver los registros.</div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== TAB RESUMEN ===== -->
@@ -915,7 +933,7 @@ function renderTablaResumen(rows, nivel) {
   else if (nivel === "zona")      cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}];
   else if (nivel === "comision")  cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}];
   else if (nivel === "puesto")    cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"cod_puesto", label:"Puesto"}];
-  else                            cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"cod_puesto", label:"Puesto"}, {k:"mesa", label:"Mesa"}];
+  else                            cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}, {k:"comision", label:"Comision"}, {k:"cod_puesto", label:"Puesto"}, {k:"mesa", label:"Mesa"}];
 
   let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>';
   cols.forEach(c => { html += `<th>${c.label}</th>`; });
@@ -1130,6 +1148,7 @@ function cargarCobertura() {
 
 function cargarControl() {
   cargarCobertura();
+  cargarControlE26();
   const municipio = document.getElementById("ctrl-municipio").value.trim();
   let url = `${API_URL}/resumen?nivel=mesa`;
   if (municipio) url += `&municipio=${encodeURIComponent(municipio)}`;
@@ -1152,6 +1171,76 @@ function filtrarTablaControl() {
   renderTablaControl(filtered);
 }
 
+let ctrlE26Rows = [];
+
+function cargarControlE26() {
+  const municipio = document.getElementById("ctrl-e26-municipio").value.trim();
+  let url = `${API_URL}/votos_e26_control`;
+  if (municipio) url += `?municipio=${encodeURIComponent(municipio)}`;
+
+  document.getElementById("control-e26-contenido").innerHTML =
+    '<div style="color:var(--gray);font-size:0.85rem;">Cargando...</div>';
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => { ctrlE26Rows = data; renderTablaControlE26(data); })
+    .catch(() => {
+      document.getElementById("control-e26-contenido").innerHTML =
+        '<div style="color:#dc2626;font-size:0.85rem;">Error al cargar.</div>';
+    });
+}
+
+function filtrarTablaControlE26() {
+  const q = document.getElementById("ctrl-e26-municipio").value.toLowerCase().trim();
+  const filtered = ctrlE26Rows.filter(r => !q || (r.municipio||"").toLowerCase().includes(q));
+  renderTablaControlE26(filtered);
+}
+
+function renderTablaControlE26(rows) {
+  const cont = document.getElementById("control-e26-contenido");
+  if (!rows.length) {
+    cont.innerHTML = '<div style="color:var(--gray);font-size:0.85rem;">No hay registros E-26.</div>';
+    return;
+  }
+  let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>' +
+    '<th>Municipio</th>' +
+    '<th>E-26 Ahora</th><th>E-26 Conservador</th>' +
+    '<th>Observacion</th><th>Usuario</th><th>Actualizado</th><th></th>' +
+    '</tr></thead><tbody>';
+
+  rows.forEach(r => {
+    const fecha = r.fecha_actualizacion
+      ? new Date(r.fecha_actualizacion).toLocaleString("es-CO", {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})
+      : "";
+    html += `<tr>
+      <td>${r.municipio||""}</td>
+      <td style="text-align:right">${(r.e26_ahora||0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.e26_conservador||0).toLocaleString()}</td>
+      <td style="font-size:0.72rem;color:var(--gray)">${r.observacion||""}</td>
+      <td style="font-size:0.72rem">${r.usuario||""}</td>
+      <td style="font-size:0.72rem;white-space:nowrap">${fecha}</td>
+      <td><button onclick="eliminarRegistroE26(${r.id})" style="background:#fee2e2;border:none;border-radius:6px;padding:0.25rem 0.5rem;cursor:pointer;color:#dc2626;font-size:0.75rem;font-weight:700;">&#x2715; Borrar</button></td>
+    </tr>`;
+  });
+  html += `<tr class="total-row"><td>TOTAL (${rows.length} municipios)</td>
+    <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e26_ahora||0),0).toLocaleString()}</td>
+    <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e26_conservador||0),0).toLocaleString()}</td>
+    <td colspan="4"></td></tr>`;
+  html += "</tbody></table></div>";
+  cont.innerHTML = html;
+}
+
+function eliminarRegistroE26(id) {
+  if (!confirm("Seguro que deseas eliminar este registro E-26?")) return;
+  fetch(`${API_URL}/votos_e26/${id}`, { method: "DELETE" })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) { showToast("Registro E-26 eliminado", "success"); cargarControlE26(); }
+      else showToast("Error: " + (data.error || "intenta de nuevo"), "error");
+    })
+    .catch(() => showToast("Error de conexion", "error"));
+}
+
 function renderTablaControl(rows) {
   const cont = document.getElementById("control-contenido");
   if (!rows.length) {
@@ -1159,7 +1248,7 @@ function renderTablaControl(rows) {
     return;
   }
   let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>' +
-    '<th>Municipio</th><th>Comision</th><th>Puesto</th><th>Mesa</th>' +
+    '<th>Municipio</th><th>Zona</th><th>Comision</th><th>Puesto</th><th>Mesa</th>' +
     '<th>E-14 Ahora</th><th>E-14 Cons</th>' +
     '<th>E-24 Ahora</th><th>E-24 Cons</th>' +
     '<th>Observacion</th><th>Usuario</th><th>Actualizado</th><th></th>' +
@@ -1171,6 +1260,7 @@ function renderTablaControl(rows) {
       : "";
     html += `<tr>
       <td>${r.municipio||""}</td>
+      <td style="text-align:center">${r.zona??""}</td>
       <td>${r.comision||""}</td>
       <td style="text-align:center">${r.cod_puesto||""}</td>
       <td style="text-align:center">${r.mesa||""}</td>
@@ -1184,7 +1274,7 @@ function renderTablaControl(rows) {
       <td><button onclick="eliminarRegistro(${r.id},'control')" style="background:#fee2e2;border:none;border-radius:6px;padding:0.25rem 0.5rem;cursor:pointer;color:#dc2626;font-size:0.75rem;font-weight:700;">&#x2715; Borrar</button></td>
     </tr>`;
   });
-  html += `<tr class="total-row"><td colspan="4">TOTAL (${rows.length} mesas)</td>
+  html += `<tr class="total-row"><td colspan="5">TOTAL (${rows.length} mesas)</td>
     <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e14_ahora||0),0).toLocaleString()}</td>
     <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e14_conservador||0),0).toLocaleString()}</td>
     <td style="text-align:right">${rows.reduce((s,r)=>s+(r.e24_ahora||0),0).toLocaleString()}</td>
