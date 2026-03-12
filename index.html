@@ -158,6 +158,10 @@
   @media(max-width:600px){ #cobertura-panel { grid-template-columns:1fr; } }
 
   .mesa-info { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:0.5rem 0.85rem; margin-bottom:1rem; font-size:0.78rem; color:var(--primary-light); font-weight:500; }
+  .mesa-ya-existe { background:#fef3c7; border:2px solid #f59e0b; border-radius:8px; padding:0.6rem 1rem; margin-bottom:1rem; font-size:0.82rem; color:#92400e; font-weight:600; display:none; }
+  .mesa-ya-existe.visible { display:flex; align-items:center; gap:0.5rem; justify-content:space-between; flex-wrap:wrap; }
+  .btn-editar { background:#f59e0b; color:white; border:none; border-radius:7px; padding:0.35rem 0.9rem; font-family:'Inter',sans-serif; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .btn-editar:hover { background:#d97706; }
   .mun-e26-info { background:#fce7f3; border:1px solid #fbcfe8; border-radius:8px; padding:0.5rem 0.85rem; margin-bottom:1rem; font-size:0.78rem; color:#9d174d; font-weight:500; }
   .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,0.4); border-top-color:white; border-radius:50%; animation:spin 0.6s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -251,6 +255,10 @@
             <input type="text" id="e14-usuario" placeholder="Quien digita">
           </div>
         </div>
+        <div class="mesa-ya-existe" id="e14-ya-existe">
+          <span>&#9888; Esta mesa ya tiene datos registrados.</span>
+          <button class="btn-editar" onclick="permitirEdicion('e14')">Editar de todos modos</button>
+        </div>
         <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
           <button class="btn-save" id="e14-btn-guardar" onclick="guardar('e14')">
             <span>&#128190;</span> Guardar
@@ -326,6 +334,10 @@
             <label>Tu nombre</label>
             <input type="text" id="e24-usuario" placeholder="Quien digita">
           </div>
+        </div>
+        <div class="mesa-ya-existe" id="e24-ya-existe">
+          <span>&#9888; Esta mesa ya tiene datos registrados.</span>
+          <button class="btn-editar" onclick="permitirEdicion('e24')">Editar de todos modos</button>
         </div>
         <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
           <button class="btn-save" id="e24-btn-guardar" onclick="guardar('e24')">
@@ -653,6 +665,7 @@ function onMesaChange(fmt) {
     " &nbsp;|&nbsp; <b>" + (ST[fmt].comision || "") + "</b>";
 
   limpiarVotos(fmt);
+  permitirEdicion(fmt);
   document.getElementById(`${fmt}-estado-guardado`).textContent = "";
   cargarVotosExistentes(fmt);
   document.getElementById(`${fmt}-votos-panel`).scrollIntoView({behavior:"smooth", block:"start"});
@@ -665,7 +678,13 @@ function cargarVotosExistentes(fmt) {
   fetch(`${API_URL}/votos?municipio=${encodeURIComponent(s.mun)}&zona=${s.zona}&cod_puesto=${s.codPuesto}&mesa=${s.mesa}`)
     .then(r => r.json())
     .then(data => {
-      if (data && data.id) {
+      const yaExiste = data && data.id;
+      const tieneEste = yaExiste && (
+        fmt === 'e14' ? (data.e14_ahora > 0 || data.e14_conservador > 0)
+                      : (data.e24_ahora > 0 || data.e24_conservador > 0)
+      );
+
+      if (yaExiste) {
         if (fmt === 'e14') {
           document.getElementById("e14-ahora").value       = data.e14_ahora || 0;
           document.getElementById("e14-conservador").value = data.e14_conservador || 0;
@@ -682,8 +701,29 @@ function cargarVotosExistentes(fmt) {
           "Guardado el " + d.toLocaleDateString("es-CO") + " " +
           d.toLocaleTimeString("es-CO", {hour:"2-digit", minute:"2-digit"});
       }
+
+      // Bloquear guardar si ya tiene datos para este formato
+      if (tieneEste) {
+        document.getElementById(`${fmt}-btn-guardar`).disabled = true;
+        const aviso = document.getElementById(`${fmt}-ya-existe`);
+        aviso.classList.add("visible");
+        // Deshabilitar inputs
+        [`${fmt}-ahora`, `${fmt}-conservador`, `${fmt}-observacion`, `${fmt}-usuario`].forEach(id => {
+          document.getElementById(id).disabled = true;
+        });
+      } else {
+        permitirEdicion(fmt);
+      }
     })
-    .catch(() => {});
+    .catch(() => { permitirEdicion(fmt); });
+}
+
+function permitirEdicion(fmt) {
+  document.getElementById(`${fmt}-btn-guardar`).disabled = false;
+  document.getElementById(`${fmt}-ya-existe`).classList.remove("visible");
+  [`${fmt}-ahora`, `${fmt}-conservador`, `${fmt}-observacion`, `${fmt}-usuario`].forEach(id => {
+    document.getElementById(id).disabled = false;
+  });
 }
 
 // ── Cargar votos E-26 ──────────────────────────────────────────────────────────
