@@ -139,8 +139,8 @@
   table.resumen tr.total-row td { background:#eff6ff; font-weight:700; color:var(--primary); border-top:2px solid var(--primary-light); }
   table.resumen tr.alerta-row td { background:#fff7ed; }
   .badge-dif { display:inline-block; padding:0.1rem 0.45rem; border-radius:8px; font-size:0.7rem; font-weight:700; }
-  .badge-dif.neg  { background:var(--success-light); color:#059669; }
-  .badge-dif.pos  { background:var(--danger-light);  color:#dc2626; }
+  .badge-dif.neg  { background:var(--danger-light);  color:#dc2626; }
+  .badge-dif.pos  { background:var(--success-light); color:#059669; }
   .badge-dif.zero { background:#e2e8f0; color:var(--gray); }
   .badge-alerta { display:inline-flex; align-items:center; gap:0.25rem; background:#fef3c7; color:#b45309; border:1px solid #fde68a; border-radius:6px; padding:0.15rem 0.5rem; font-size:0.7rem; font-weight:700; }
   .badge-ok { display:inline-flex; align-items:center; gap:0.25rem; background:#d1fae5; color:#059669; border:1px solid #a7f3d0; border-radius:6px; padding:0.15rem 0.5rem; font-size:0.7rem; font-weight:700; }
@@ -557,7 +557,7 @@ const ST = {
 
 let resumenRows = [];
 let resumenMunRows = [];
-let resumenSort = { col: null, dir: 1 };
+let resumenSort = { col: null, dir: 1, nivel: null };
 
 // ── Cargar estructura ──────────────────────────────────────────────────────────
 fetch(`${API_URL}/estructura.json`)
@@ -924,7 +924,7 @@ function cargarResumen() {
 
   fetch(url)
     .then(r => r.json())
-    .then(data => { resumenRows = data; renderTablaResumen(data, nivel); })
+    .then(data => { resumenRows = data; resumenSort = { col: null, dir: 1, nivel }; renderTablaResumen(data, nivel); })
     .catch(() => {
       document.getElementById("resumen-contenido").innerHTML =
         '<div style="color:#dc2626;font-size:0.85rem;">Error al cargar.</div>';
@@ -943,14 +943,22 @@ function filtrarTablaResumen() {
   renderTablaResumen(filtered, nivel);
 }
 
-function sortResumen(colKey, rows, nivel) {
+function sortResumen(colKey) {
+  const nivel = resumenSort.nivel || document.getElementById("res-nivel").value;
   if (resumenSort.col === colKey) {
     resumenSort.dir *= -1;
   } else {
     resumenSort.col = colKey;
     resumenSort.dir = 1;
   }
-  const sorted = [...rows].sort((a, b) => {
+  resumenSort.nivel = nivel;
+  // Para columnas calculadas que no vienen del backend, calcularlas antes de ordenar
+  const enrichedRows = resumenRows.map(r => ({
+    ...r,
+    _dif_ahora: (r.total_e24_ahora||0) - (r.total_e14_ahora||0),
+    _dif_conservador: (r.total_e24_conservador||0) - (r.total_e14_conservador||0),
+  }));
+  const sorted = [...enrichedRows].sort((a, b) => {
     let va = a[colKey] ?? "";
     let vb = b[colKey] ?? "";
     if (!isNaN(parseFloat(va)) && !isNaN(parseFloat(vb))) {
@@ -1001,10 +1009,10 @@ function renderTablaResumen(rows, nivel) {
 
   let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>';
   cols.forEach(c => {
-    html += `<th onclick="sortResumen('${c.k}', resumenRows, '${nivel}')">${c.label}${arrow(c.k)}</th>`;
+    html += `<th onclick="sortResumen('${c.k}')">${c.label}${arrow(c.k)}</th>`;
   });
   numCols.forEach(c => {
-    html += `<th onclick="sortResumen('${c.k}', resumenRows, '${nivel}')">${c.label}${arrow(c.k)}</th>`;
+    html += `<th onclick="sortResumen('${c.k}')">${c.label}${arrow(c.k)}</th>`;
   });
   html += '</tr></thead><tbody>';
 
