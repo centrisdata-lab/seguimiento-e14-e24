@@ -131,7 +131,9 @@
   .filtros-resumen .form-group { min-width:140px; flex:none; }
   .tabla-wrap { overflow-x:auto; }
   table.resumen { width:100%; border-collapse:collapse; font-size:0.78rem; }
-  table.resumen th { background:var(--gradient); color:white; padding:0.5rem 0.65rem; text-align:left; font-weight:600; white-space:nowrap; }
+  table.resumen th { background:var(--gradient); color:white; padding:0.5rem 0.65rem; text-align:left; font-weight:600; white-space:nowrap; cursor:pointer; user-select:none; }
+  table.resumen th:hover { opacity:0.85; }
+  table.resumen th .sort-arrow { margin-left:4px; font-size:0.7rem; opacity:0.7; }
   table.resumen td { padding:0.45rem 0.65rem; border-bottom:1px solid #e2e8f0; }
   table.resumen tr:hover td { background:var(--light); }
   table.resumen tr.total-row td { background:#eff6ff; font-weight:700; color:var(--primary); border-top:2px solid var(--primary-light); }
@@ -555,6 +557,7 @@ const ST = {
 
 let resumenRows = [];
 let resumenMunRows = [];
+let resumenSort = { col: null, dir: 1 };
 
 // ── Cargar estructura ──────────────────────────────────────────────────────────
 fetch(`${API_URL}/estructura.json`)
@@ -940,13 +943,32 @@ function filtrarTablaResumen() {
   renderTablaResumen(filtered, nivel);
 }
 
+function sortResumen(colKey, rows, nivel) {
+  if (resumenSort.col === colKey) {
+    resumenSort.dir *= -1;
+  } else {
+    resumenSort.col = colKey;
+    resumenSort.dir = 1;
+  }
+  const sorted = [...rows].sort((a, b) => {
+    let va = a[colKey] ?? "";
+    let vb = b[colKey] ?? "";
+    if (!isNaN(parseFloat(va)) && !isNaN(parseFloat(vb))) {
+      va = parseFloat(va); vb = parseFloat(vb);
+    } else {
+      va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+    }
+    return va < vb ? -resumenSort.dir : va > vb ? resumenSort.dir : 0;
+  });
+  renderTablaResumen(sorted, nivel);
+}
+
 function renderTablaResumen(rows, nivel) {
   const cont = document.getElementById("resumen-contenido");
   if (!rows.length) {
     cont.innerHTML = '<div style="color:var(--gray);font-size:0.85rem;">No hay registros aun.</div>';
     return;
   }
-  const esMesa = nivel === "mesa";
   let cols = [];
   if      (nivel === "municipio") cols = [{k:"municipio", label:"Municipio"}];
   else if (nivel === "zona")      cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}];
@@ -954,17 +976,40 @@ function renderTablaResumen(rows, nivel) {
   else if (nivel === "puesto")    cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}, {k:"cod_puesto", label:"Puesto"}, {k:"comision", label:"Auxiliar"}];
   else                            cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}, {k:"cod_puesto", label:"Puesto"}, {k:"comision", label:"Auxiliar"}, {k:"mesa", label:"Mesa"}];
 
+  // Todas las columnas con sus claves para sort
+  const numCols = [
+    {k:"mesas_registradas", label:"Mesas"},
+    {k:"total_e14_ahora", label:"E-14 Ahora"},
+    {k:"total_e24_ahora", label:"E-24 Ahora"},
+    {k:"_dif_ahora", label:"Dif Ahora"},
+    {k:"total_e14_conservador", label:"E-14 Conservador"},
+    {k:"total_e24_conservador", label:"E-24 Conservador"},
+    {k:"_dif_conservador", label:"Dif Conservador"},
+  ];
+
+  // Enriquecer rows con difs calculadas
+  const enriched = rows.map(r => ({
+    ...r,
+    _dif_ahora: (r.total_e14_ahora||0) - (r.total_e24_ahora||0),
+    _dif_conservador: (r.total_e14_conservador||0) - (r.total_e24_conservador||0),
+  }));
+
+  const arrow = (k) => {
+    if (resumenSort.col !== k) return '<span class="sort-arrow">⇅</span>';
+    return resumenSort.dir === 1 ? '<span class="sort-arrow">▲</span>' : '<span class="sort-arrow">▼</span>';
+  };
+
   let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>';
-  cols.forEach(c => { html += `<th>${c.label}</th>`; });
-  html += `<th>Mesas</th>
-    <th>E-14 Ahora</th><th>E-24 Ahora</th><th>Dif Ahora</th>
-    <th>E-14 Conservador</th><th>E-24 Conservador</th><th>Dif Conservador</th>
-  </tr></thead><tbody>`;
+  cols.forEach(c => {
+    html += `<th onclick="sortResumen('${c.k}', resumenRows, '${nivel}')">${c.label}${arrow(c.k)}</th>`;
+  });
+  numCols.forEach(c => {
+    html += `<th onclick="sortResumen('${c.k}', resumenRows, '${nivel}')">${c.label}${arrow(c.k)}</th>`;
+  });
+  html += '</tr></thead><tbody>';
 
   let tMesas=0, tE14a=0, tE24a=0, tE14c=0, tE24c=0;
-  rows.forEach(r => {
-    const da = (r.total_e14_ahora||0) - (r.total_e24_ahora||0);
-    const dc = (r.total_e14_conservador||0) - (r.total_e24_conservador||0);
+  enriched.forEach(r => {
     tMesas += parseInt(r.mesas_registradas)||0;
     tE14a  += r.total_e14_ahora||0;
     tE24a  += r.total_e24_ahora||0;
@@ -976,10 +1021,10 @@ function renderTablaResumen(rows, nivel) {
       <td style="text-align:center">${r.mesas_registradas}</td>
       <td style="text-align:right">${(r.total_e14_ahora||0).toLocaleString()}</td>
       <td style="text-align:right">${(r.total_e24_ahora||0).toLocaleString()}</td>
-      <td style="text-align:center">${difBadge(da)}</td>
+      <td style="text-align:center">${difBadge(r._dif_ahora)}</td>
       <td style="text-align:right">${(r.total_e14_conservador||0).toLocaleString()}</td>
       <td style="text-align:right">${(r.total_e24_conservador||0).toLocaleString()}</td>
-      <td style="text-align:center">${difBadge(dc)}</td>
+      <td style="text-align:center">${difBadge(r._dif_conservador)}</td>
     </tr>`;
   });
 
