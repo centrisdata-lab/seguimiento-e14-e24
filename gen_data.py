@@ -40,14 +40,8 @@ def main():
     # Estructura: { municipio: { zona: { cod_puesto: { nom, comision, mesas:[] } } } }
     data = {}
 
-    # Municipios cuyo nombre en DIVIPOLA difiere del nombre oficial usado en la app
-    RENOMBRAR = {
-        "SAN PEDRO": "SAN PEDRO DE LOS MILAGROS",
-    }
-
     for r in puesto_rows:
-        mun_raw = str(r[5]).strip().upper()
-        mun = RENOMBRAR.get(mun_raw, mun_raw)
+        mun = str(r[5]).strip().upper()
         zona   = safe_int(r[2]) if r[2] is not None else 0
         puesto = safe_int(r[3]) if r[3] is not None else 0
         nom_raw = str(r[6]).strip() if r[6] else ""
