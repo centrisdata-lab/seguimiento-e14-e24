@@ -254,7 +254,7 @@ def get_resumen():
                     """, (municipio, municipio))
                 elif nivel == "mesa":
                     cur.execute("""
-                        SELECT id, municipio, comision, cod_puesto, zona, mesa,
+                        SELECT id, municipio, zona, cod_puesto, comision, mesa,
                                e14_ahora, e14_conservador, e24_ahora, e24_conservador,
                                observacion, usuario, fecha_actualizacion,
                                1 AS mesas_registradas,
@@ -265,11 +265,11 @@ def get_resumen():
                         FROM votos
                         WHERE (%s = '' OR UPPER(municipio) = %s)
                           AND (%s = '' OR UPPER(comision)  = %s)
-                        ORDER BY municipio, comision, cod_puesto, mesa
+                        ORDER BY municipio, zona, cod_puesto, comision, mesa
                     """, (municipio, municipio, comision, comision))
                 elif nivel == "puesto":
                     cur.execute("""
-                        SELECT municipio, comision, cod_puesto,
+                        SELECT municipio, zona, cod_puesto, comision,
                                COUNT(*) AS mesas_registradas,
                                SUM(e14_ahora) AS total_e14_ahora,
                                SUM(e14_conservador) AS total_e14_conservador,
@@ -278,12 +278,12 @@ def get_resumen():
                         FROM votos
                         WHERE (%s = '' OR UPPER(municipio) = %s)
                           AND (%s = '' OR UPPER(comision)  = %s)
-                        GROUP BY municipio, comision, cod_puesto
-                        ORDER BY municipio, comision, cod_puesto
+                        GROUP BY municipio, zona, cod_puesto, comision
+                        ORDER BY municipio, zona, cod_puesto, comision
                     """, (municipio, municipio, comision, comision))
                 elif nivel == "comision":
                     cur.execute("""
-                        SELECT municipio, comision,
+                        SELECT municipio, zona, comision,
                                COUNT(*) AS mesas_registradas,
                                SUM(e14_ahora) AS total_e14_ahora,
                                SUM(e14_conservador) AS total_e14_conservador,
@@ -291,8 +291,8 @@ def get_resumen():
                                SUM(e24_conservador) AS total_e24_conservador
                         FROM votos
                         WHERE (%s = '' OR UPPER(municipio) = %s)
-                        GROUP BY municipio, comision
-                        ORDER BY municipio, comision
+                        GROUP BY municipio, zona, comision
+                        ORDER BY municipio, zona, comision
                     """, (municipio, municipio))
                 else:  # municipio
                     cur.execute("""

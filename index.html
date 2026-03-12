@@ -931,9 +931,9 @@ function renderTablaResumen(rows, nivel) {
   let cols = [];
   if      (nivel === "municipio") cols = [{k:"municipio", label:"Municipio"}];
   else if (nivel === "zona")      cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}];
-  else if (nivel === "comision")  cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}];
-  else if (nivel === "puesto")    cols = [{k:"municipio", label:"Municipio"}, {k:"comision", label:"Comision"}, {k:"cod_puesto", label:"Puesto"}];
-  else                            cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}, {k:"comision", label:"Comision"}, {k:"cod_puesto", label:"Puesto"}, {k:"mesa", label:"Mesa"}];
+  else if (nivel === "comision")  cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}, {k:"comision", label:"Auxiliar"}];
+  else if (nivel === "puesto")    cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}, {k:"cod_puesto", label:"Puesto"}, {k:"comision", label:"Auxiliar"}];
+  else                            cols = [{k:"municipio", label:"Municipio"}, {k:"zona", label:"Zona"}, {k:"cod_puesto", label:"Puesto"}, {k:"comision", label:"Auxiliar"}, {k:"mesa", label:"Mesa"}];
 
   let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>';
   cols.forEach(c => { html += `<th>${c.label}</th>`; });
@@ -1248,7 +1248,7 @@ function renderTablaControl(rows) {
     return;
   }
   let html = '<div class="tabla-wrap"><table class="resumen"><thead><tr>' +
-    '<th>Municipio</th><th>Zona</th><th>Comision</th><th>Puesto</th><th>Mesa</th>' +
+    '<th>Municipio</th><th>Zona</th><th>Puesto</th><th>Auxiliar</th><th>Mesa</th>' +
     '<th>E-14 Ahora</th><th>E-14 Cons</th>' +
     '<th>E-24 Ahora</th><th>E-24 Cons</th>' +
     '<th>Observacion</th><th>Usuario</th><th>Actualizado</th><th></th>' +
@@ -1261,8 +1261,8 @@ function renderTablaControl(rows) {
     html += `<tr>
       <td>${r.municipio||""}</td>
       <td style="text-align:center">${r.zona??""}</td>
-      <td>${r.comision||""}</td>
       <td style="text-align:center">${r.cod_puesto||""}</td>
+      <td>${r.comision||""}</td>
       <td style="text-align:center">${r.mesa||""}</td>
       <td style="text-align:right">${(r.e14_ahora||0).toLocaleString()}</td>
       <td style="text-align:right">${(r.e14_conservador||0).toLocaleString()}</td>
