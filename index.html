@@ -50,6 +50,9 @@
   .btn-mun.prioritario { background:#fff7ed; border-color:#f97316; color:#c2410c; }
   .btn-mun.prioritario:hover { background:#fed7aa; border-color:#ea580c; }
   .btn-mun.prioritario.active { background:linear-gradient(135deg,#ea580c,#f97316); color:white; border-color:#c2410c; }
+  .btn-mun.secundario { background:#f0fdf4; border-color:#22c55e; color:#15803d; }
+  .btn-mun.secundario:hover { background:#bbf7d0; border-color:#16a34a; }
+  .btn-mun.secundario.active { background:linear-gradient(135deg,#16a34a,#22c55e); color:white; border-color:#15803d; }
 
   .form-row { display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end; margin-bottom:1rem; }
   .form-group { display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:150px; }
@@ -531,7 +534,16 @@ const MUNICIPIOS_PRIORITARIOS = new Set([
   "CARMEN DE VIBORAL","CAUCASIA","CHIGORODO","CISNEROS","COPACABANA",
   "ENVIGADO","GIRARDOTA","GUARNE","ITAGUI","LA CEJA","LA ESTRELLA",
   "LA UNION","MARINILLA","MEDELLIN","NECOCLI","RIONEGRO","SABANETA",
-  "SAN PEDRO DE LOS MILAGROS","SANTA BARBARA","SEGOVIA","SOPETRAN","TURBO"
+  "SAN PEDRO","SANTA BARBARA","SEGOVIA","SOPETRAN","TURBO"
+]);
+
+const MUNICIPIOS_SECUNDARIOS = new Set([
+  "ABEJORRAL","ABRIAQUI","ALEJANDRIA","ANDES","ANGELOPOLIS","ANGOSTURA",
+  "ANORI","ANTIOQUIA","ANZA","ARGELIA","ARMENIA","BELMIRA","BETANIA",
+  "BETULIA","BOLIVAR","BRICEÑO","BURITICA","CAICEDO","CAMPAMENTO",
+  "CARACOLI","CARAMANTA","CAROLINA","CAÑASGORDAS","COCORNA","CONCEPCION",
+  "CONCORDIA","DABEIBA","DON MATIAS","EBEJICO","EL BAGRE","ENTRERRIOS",
+  "FREDONIA","FRONTINO"
 ]);
 
 // Estado por formato
@@ -583,7 +595,8 @@ function renderMunicipios(fmt) {
     if (q && !m.toLowerCase().includes(q)) return;
     const btn = document.createElement("button");
     const esPrio = MUNICIPIOS_PRIORITARIOS.has(m);
-    btn.className = "btn-mun" + (esPrio ? " prioritario" : "") + (m === ST[fmt].mun ? " active" : "");
+    const esSec  = MUNICIPIOS_SECUNDARIOS.has(m);
+    btn.className = "btn-mun" + (esPrio ? " prioritario" : esSec ? " secundario" : "") + (m === ST[fmt].mun ? " active" : "");
     btn.textContent = m;
     btn.onclick = () => seleccionarMun(fmt, m);
     grid.appendChild(btn);
