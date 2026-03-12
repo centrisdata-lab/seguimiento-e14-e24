@@ -990,8 +990,8 @@ function renderTablaResumen(rows, nivel) {
   // Enriquecer rows con difs calculadas
   const enriched = rows.map(r => ({
     ...r,
-    _dif_ahora: (r.total_e14_ahora||0) - (r.total_e24_ahora||0),
-    _dif_conservador: (r.total_e14_conservador||0) - (r.total_e24_conservador||0),
+    _dif_ahora: (r.total_e24_ahora||0) - (r.total_e14_ahora||0),
+    _dif_conservador: (r.total_e24_conservador||0) - (r.total_e14_conservador||0),
   }));
 
   const arrow = (k) => {
@@ -1028,8 +1028,8 @@ function renderTablaResumen(rows, nivel) {
     </tr>`;
   });
 
-  const tDa = tE14a - tE24a;
-  const tDc = tE14c - tE24c;
+  const tDa = tE24a - tE14a;
+  const tDc = tE24c - tE14c;
   const nLabel = rows.length + (nivel==="municipio"?" municipios":nivel==="zona"?" zonas":nivel==="comision"?" comisiones":nivel==="puesto"?" puestos":" mesas");
   html += `<tr class="total-row">`;
   cols.forEach((c, i) => { html += `<td>${i===0 ? "TOTAL ("+nLabel+")" : ""}</td>`; });
@@ -1099,10 +1099,10 @@ function renderTablaResumenMunicipal(rows) {
     tE14a += e14a; tE24a += e24a; if (e26a !== null) tE26a += e26a;
     tE14c += e14c; tE24c += e24c; if (e26c !== null) tE26c += e26c;
 
-    const da1424 = e14a - e24a;
-    const da1426 = e26a !== null ? e14a - e26a : null;
-    const dc1424 = e14c - e24c;
-    const dc1426 = e26c !== null ? e14c - e26c : null;
+    const da1424 = e24a - e14a;
+    const da1426 = e26a !== null ? e26a - e14a : null;
+    const dc1424 = e24c - e14c;
+    const dc1426 = e26c !== null ? e26c - e14c : null;
 
     // Alerta si cualquier diferencia entre los 3 formatos no es cero
     const hayAlerta = (da1424 !== 0) || (da1426 !== null && da1426 !== 0) ||
@@ -1132,13 +1132,13 @@ function renderTablaResumenMunicipal(rows) {
     <td style="text-align:right">${tE14a.toLocaleString()}</td>
     <td style="text-align:right">${tE24a.toLocaleString()}</td>
     <td style="text-align:right">${tE26a.toLocaleString()}</td>
-    <td style="text-align:center">${difBadge(tE14a-tE24a)}</td>
-    <td style="text-align:center">${difBadge(tE14a-tE26a)}</td>
+    <td style="text-align:center">${difBadge(tE24a-tE14a)}</td>
+    <td style="text-align:center">${difBadge(tE26a-tE14a)}</td>
     <td style="text-align:right">${tE14c.toLocaleString()}</td>
     <td style="text-align:right">${tE24c.toLocaleString()}</td>
     <td style="text-align:right">${tE26c.toLocaleString()}</td>
-    <td style="text-align:center">${difBadge(tE14c-tE24c)}</td>
-    <td style="text-align:center">${difBadge(tE14c-tE26c)}</td>
+    <td style="text-align:center">${difBadge(tE24c-tE14c)}</td>
+    <td style="text-align:center">${difBadge(tE26c-tE14c)}</td>
     <td></td>
   </tr>`;
   html += "</tbody></table></div>";
