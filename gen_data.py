@@ -30,24 +30,34 @@ def main():
     rows = list(ws.iter_rows(values_only=True))
     print(f"  {len(rows)-1} filas totales")
 
-    # Solo filas con zona y puesto definidos (nivel puesto)
     # Columnas: DEPARTAMENTO, MUNICIPIO, ZONA, PUESTO, dep, mun, nom, tipo_com, nom_com, ini, fin, tot, lug, dir
-    puesto_rows = [r for r in rows[1:] if r[2] is not None and r[3] is not None and r[5]]
+    # Filas validas: deben tener municipio (col5) e ini/fin (col9/10)
+    # Si zona o puesto estan vacios -> zona=0, puesto=0
+    # Si nom (col6) esta vacio -> usar lug (col12) como nombre del puesto
+    puesto_rows = [r for r in rows[1:] if r[5] and r[9] is not None and r[10] is not None]
     print(f"  Filas de puesto: {len(puesto_rows)}")
 
     # Estructura: { municipio: { zona: { cod_puesto: { nom, comision, mesas:[] } } } }
     data = {}
 
+    # Municipios cuyo nombre en DIVIPOLA difiere del nombre oficial usado en la app
+    RENOMBRAR = {
+        "SAN PEDRO": "SAN PEDRO DE LOS MILAGROS",
+    }
+
     for r in puesto_rows:
-        mun = str(r[5]).strip().upper()
-        zona = safe_int(r[2])
-        puesto = safe_int(r[3])
-        nom = str(r[6]).strip() if r[6] else ""
+        mun_raw = str(r[5]).strip().upper()
+        mun = RENOMBRAR.get(mun_raw, mun_raw)
+        zona   = safe_int(r[2]) if r[2] is not None else 0
+        puesto = safe_int(r[3]) if r[3] is not None else 0
+        nom_raw = str(r[6]).strip() if r[6] else ""
+        lug_raw = str(r[12]).strip() if r[12] else ""
+        nom = nom_raw if nom_raw else lug_raw
         comision = str(r[8]).strip() if r[8] else ""
         ini = safe_int(r[9])
         fin = safe_int(r[10])
 
-        if None in (zona, puesto, ini, fin):
+        if zona is None or puesto is None or ini is None or fin is None:
             continue
 
         mesas = list(range(ini, fin + 1))
