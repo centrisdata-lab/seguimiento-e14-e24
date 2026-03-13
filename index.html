@@ -534,23 +534,39 @@ function cargarDigitados() {
         if (r.e14_ahora > 0 || r.e14_conservador > 0) E14_DIGITADOS.add(k);
         if (r.e24_ahora > 0 || r.e24_conservador > 0) E24_DIGITADOS.add(k);
       });
+      calcularMunsCompletos();
       renderMunicipios('e14');
       renderMunicipios('e24');
     }).catch(()=>{});
 }
 
-// Retorna true si todas las mesas del municipio estan digitadas para el formato dado
-function munCompletado(fmt, mun) {
-  if (!ESTRUCTURA || !ESTRUCTURA[mun]) return false;
-  const digitados = fmt === 'e14' ? E14_DIGITADOS : E24_DIGITADOS;
-  for (const z of Object.keys(ESTRUCTURA[mun])) {
-    for (const p of Object.keys(ESTRUCTURA[mun][z])) {
-      for (const mesa of ESTRUCTURA[mun][z][p].mesas) {
-        if (!digitados.has(`${mun}|${z}|${p}|${mesa}`)) return false;
+// Sets precalculados: municipios con TODAS sus mesas digitadas
+let E14_MUN_COMPLETOS = new Set();
+let E24_MUN_COMPLETOS = new Set();
+
+function calcularMunsCompletos() {
+  if (!ESTRUCTURA) return;
+  E14_MUN_COMPLETOS = new Set();
+  E24_MUN_COMPLETOS = new Set();
+  for (const mun of Object.keys(ESTRUCTURA)) {
+    let ok14 = true, ok24 = true;
+    outer: for (const z of Object.keys(ESTRUCTURA[mun])) {
+      for (const p of Object.keys(ESTRUCTURA[mun][z])) {
+        for (const mesa of ESTRUCTURA[mun][z][p].mesas) {
+          const k = `${mun}|${z}|${p}|${mesa}`;
+          if (ok14 && !E14_DIGITADOS.has(k)) ok14 = false;
+          if (ok24 && !E24_DIGITADOS.has(k)) ok24 = false;
+          if (!ok14 && !ok24) break outer;
+        }
       }
     }
+    if (ok14) E14_MUN_COMPLETOS.add(mun);
+    if (ok24) E24_MUN_COMPLETOS.add(mun);
   }
-  return true;
+}
+
+function munCompletado(fmt, mun) {
+  return fmt === 'e14' ? E14_MUN_COMPLETOS.has(mun) : E24_MUN_COMPLETOS.has(mun);
 }
 
 const MUNICIPIOS_PRIORITARIOS = new Set([
@@ -910,7 +926,8 @@ function enviarGuardar(fmt, payload) {
       // Actualizar ✓ en el selector de mesas
       const opt = document.querySelector(`#${fmt}-sel-mesa option[value="${s.mesa}"]`);
       if (opt && !opt.textContent.includes('✓')) opt.textContent += ' ✓';
-      // Actualizar ✓ en el boton del municipio si ya esta completo
+      // Recalcular municipio completo y actualizar boton si corresponde
+      calcularMunsCompletos();
       if (munCompletado(fmt, s.mun)) {
         const munGrid = document.getElementById(`${fmt}-mun-grid`);
         if (munGrid) {
