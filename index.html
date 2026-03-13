@@ -53,6 +53,9 @@
   .btn-mun.secundario { background:#f0fdf4; border-color:#22c55e; color:#15803d; }
   .btn-mun.secundario:hover { background:#bbf7d0; border-color:#16a34a; }
   .btn-mun.secundario.active { background:linear-gradient(135deg,#16a34a,#22c55e); color:white; border-color:#15803d; }
+  .btn-mun.terciario { background:#faf5ff; border-color:#a855f7; color:#7e22ce; }
+  .btn-mun.terciario:hover { background:#e9d5ff; border-color:#9333ea; }
+  .btn-mun.terciario.active { background:linear-gradient(135deg,#9333ea,#a855f7); color:white; border-color:#7e22ce; }
 
   .form-row { display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end; margin-bottom:1rem; }
   .form-group { display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:150px; }
@@ -551,6 +554,15 @@ const MUNICIPIOS_SECUNDARIOS = new Set([
   "FREDONIA","FRONTINO"
 ]);
 
+const MUNICIPIOS_TERCIARIOS = new Set([
+  "CACERES","GIRALDO","GUADALUPE","GUATAPE","HELICONIA","HISPANIA",
+  "LA PINTADA","LIBORINA","MACEO","MONTEBELLO","MUTATA","PUERTO TRIUNFO",
+  "REMEDIOS","RETIRO","SAN CARLOS","SAN JERONIMO","SAN JOSE DE LA MONTAÑA",
+  "SAN LUIS","SAN PEDRO DE URABA","SAN ROQUE","SANTA ROSA DE OSOS",
+  "SANTO DOMINGO","SONSON","TARAZA","TITIRIBI","TOLEDO","VALPARAISO",
+  "VENECIA","YALI","YARUMAL","YOLOMBO"
+]);
+
 // Estado por formato
 const ST = {
   e14: { mun:null, zona:null, codPuesto:null, nomPuesto:null, comision:null, mesa:null },
@@ -606,8 +618,9 @@ function renderMunicipios(fmt) {
     const btn = document.createElement("button");
     const esPrio = MUNICIPIOS_PRIORITARIOS.has(m);
     const esSec  = MUNICIPIOS_SECUNDARIOS.has(m);
+    const esTer  = MUNICIPIOS_TERCIARIOS.has(m);
     const yaDigitado = fmt === 'e26' ? E26_DIGITADOS.has(m) : false;
-    btn.className = "btn-mun" + (esPrio ? " prioritario" : esSec ? " secundario" : "") + (m === ST[fmt].mun ? " active" : "");
+    btn.className = "btn-mun" + (esPrio ? " prioritario" : esSec ? " secundario" : esTer ? " terciario" : "") + (m === ST[fmt].mun ? " active" : "");
     btn.textContent = m + (yaDigitado ? " ✓" : "");
     btn.onclick = () => seleccionarMun(fmt, m);
     grid.appendChild(btn);
