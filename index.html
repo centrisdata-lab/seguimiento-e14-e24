@@ -524,15 +524,15 @@ function cargarDigitados() {
       renderMunicipios('e26');
     }).catch(()=>{});
   // Cargar mesas digitadas en E-14 y E-24
-  fetch(`${API_URL}/resumen?nivel=mesa`)
+  fetch(`${API_URL}/digitados`)
     .then(r => r.json())
     .then(data => {
       E14_DIGITADOS = new Set();
       E24_DIGITADOS = new Set();
       (data||[]).forEach(r => {
         const k = `${r.municipio}|${r.zona}|${r.cod_puesto}|${r.mesa}`;
-        if (r.e14_ahora > 0 || r.e14_conservador > 0) E14_DIGITADOS.add(k);
-        if (r.e24_ahora > 0 || r.e24_conservador > 0) E24_DIGITADOS.add(k);
+        if (r.tiene_e14) E14_DIGITADOS.add(k);
+        if (r.tiene_e24) E24_DIGITADOS.add(k);
       });
       calcularMunsCompletos();
       renderMunicipios('e14');
@@ -808,6 +808,9 @@ function cargarVotosExistentes(fmt) {
         [`${fmt}-ahora`, `${fmt}-conservador`, `${fmt}-observacion`, `${fmt}-usuario`].forEach(id => {
           document.getElementById(id).disabled = true;
         });
+        // Agregar ✓ al option de la mesa en el selector
+        const opt = document.querySelector(`#${fmt}-sel-mesa option[value="${s.mesa}"]`);
+        if (opt && !opt.textContent.includes('✓')) opt.textContent += ' ✓';
       } else {
         permitirEdicion(fmt);
       }

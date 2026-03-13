@@ -497,6 +497,26 @@ def get_faltantes():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Digitados: mesas con cualquier dato E-14 o E-24 (para marcar ✓ en UI) ─────
+@app.route("/digitados", methods=["GET"])
+def get_digitados():
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT municipio, zona, cod_puesto, mesa,
+                           (e14_ahora > 0 OR e14_conservador > 0) AS tiene_e14,
+                           (e24_ahora > 0 OR e24_conservador > 0) AS tiene_e24
+                    FROM votos
+                    WHERE e14_ahora > 0 OR e14_conservador > 0
+                       OR e24_ahora > 0 OR e24_conservador > 0
+                """)
+                rows = cur.fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── E-26: Listar todos los registros para control ─────────────────────────────
 @app.route("/votos_e26_control", methods=["GET"])
 def get_votos_e26_control():
