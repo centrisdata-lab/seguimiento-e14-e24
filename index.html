@@ -423,43 +423,15 @@
     </div>
 
     <div class="card">
-      <div class="subtabs">
-        <button class="subtab-btn active" id="ctrl-subtab-btn-e14e24" onclick="showCtrlSubtab('e14e24')">E-14 / E-24 por mesa</button>
-        <button class="subtab-btn" id="ctrl-subtab-btn-e26" onclick="showCtrlSubtab('e26')">E-26 por municipio</button>
-      </div>
 
       <!-- Sub-tab E-14/E-24 -->
       <div id="ctrl-subtab-e14e24">
-        <div class="filtros-resumen">
-          <div class="form-group">
-            <label>Filtrar municipio</label>
-            <input type="text" id="ctrl-municipio" placeholder="Todos" oninput="filtrarTablaControl()">
-          </div>
-          <div class="form-group" style="flex:none">
-            <label>&nbsp;</label>
-            <button class="btn-save" onclick="cargarControl()" style="padding:0.5rem 1rem; font-size:0.8rem;">&#x21BB; Actualizar</button>
-          </div>
-        </div>
-        <div id="control-contenido">
-          <div style="color:var(--gray); font-size:0.85rem;">Haz clic en Actualizar para ver los registros.</div>
-        </div>
+        <div id="control-contenido" style="display:none"></div>
       </div>
 
       <!-- Sub-tab E-26 -->
       <div id="ctrl-subtab-e26" style="display:none">
-        <div class="filtros-resumen">
-          <div class="form-group">
-            <label>Filtrar municipio</label>
-            <input type="text" id="ctrl-e26-municipio" placeholder="Todos" oninput="filtrarTablaControlE26()">
-          </div>
-          <div class="form-group" style="flex:none">
-            <label>&nbsp;</label>
-            <button class="btn-save" onclick="cargarControlE26()" style="padding:0.5rem 1rem; font-size:0.8rem;">&#x21BB; Actualizar</button>
-          </div>
-        </div>
-        <div id="control-e26-contenido">
-          <div style="color:var(--gray); font-size:0.85rem;">Haz clic en Actualizar para ver los registros.</div>
-        </div>
+        <div id="control-e26-contenido" style="display:none"></div>
       </div>
     </div>
   </div>
