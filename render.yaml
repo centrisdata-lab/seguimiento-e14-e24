@@ -10,7 +10,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --workers 4 --threads 4 --timeout 60 --worker-class gthread
     envVars:
       - key: DATABASE_URL
         fromDatabase:

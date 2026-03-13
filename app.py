@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2 import pool
 from datetime import datetime
 
 app = Flask(__name__, static_folder=".")
@@ -10,9 +11,29 @@ CORS(app)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+# Pool de conexiones: soporta hasta 20 conexiones simultaneas
+_pool = None
 
+def get_pool():
+    global _pool
+    if _pool is None:
+        _pool = pool.ThreadedConnectionPool(
+            minconn=2,
+            maxconn=20,
+            dsn=DATABASE_URL,
+            cursor_factory=RealDictCursor
+        )
+    return _pool
+
+from contextlib import contextmanager
+
+@contextmanager
 def get_conn():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    conn = get_pool().getconn()
+    try:
+        yield conn
+    finally:
+        get_pool().putconn(conn)
 
 
 def init_db():
