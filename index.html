@@ -468,16 +468,28 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Filtrar municipio</label>
-            <input type="text" id="res-municipio" placeholder="Todos" oninput="filtrarTablaResumen()">
+            <label>Municipio</label>
+            <input type="text" id="res-municipio" placeholder="Todos" onkeydown="if(event.key==='Enter')cargarResumen()" oninput="filtrarTablaResumen()">
           </div>
           <div class="form-group">
-            <label>Filtrar comision</label>
+            <label>Comision</label>
             <input type="text" id="res-comision" placeholder="Todas" oninput="filtrarTablaResumen()">
+          </div>
+          <div class="form-group">
+            <label>Zona</label>
+            <input type="text" id="res-zona" placeholder="Todas" oninput="filtrarTablaResumen()" style="width:70px">
+          </div>
+          <div class="form-group">
+            <label>Puesto</label>
+            <input type="text" id="res-puesto" placeholder="Todos" oninput="filtrarTablaResumen()" style="width:70px">
+          </div>
+          <div class="form-group">
+            <label>Mesa</label>
+            <input type="text" id="res-mesa" placeholder="Todas" oninput="filtrarTablaResumen()" style="width:60px">
           </div>
           <div class="form-group" style="flex:none">
             <label>&nbsp;</label>
-            <button class="btn-save" onclick="cargarResumen()" style="padding:0.5rem 1rem; font-size:0.8rem;">&#x21BB; Actualizar</button>
+            <button class="btn-save" onclick="cargarResumen()" style="padding:0.5rem 1rem; font-size:0.8rem;">&#x21BB; Buscar</button>
           </div>
         </div>
         <div id="resumen-contenido">
@@ -1009,6 +1021,7 @@ function cargarResumen() {
   const comision  = document.getElementById("res-comision").value.trim();
 
   let url = `${API_URL}/resumen?nivel=${nivel}`;
+  // Enviar municipio al servidor para filtrar en origen (evita traer todos los datos)
   if (municipio) url += `&municipio=${encodeURIComponent(municipio)}`;
   if (comision && nivel !== "municipio") url += `&comision=${encodeURIComponent(comision)}`;
 
@@ -1017,7 +1030,12 @@ function cargarResumen() {
 
   fetch(url)
     .then(r => r.json())
-    .then(data => { resumenRows = data; resumenPage = 1; resumenSort = { col: null, dir: 1, nivel }; renderTablaResumen(data, nivel); })
+    .then(data => {
+      resumenRows = data;
+      resumenPage = 1;
+      resumenSort = { col: null, dir: 1, nivel };
+      filtrarTablaResumen();
+    })
     .catch(() => {
       document.getElementById("resumen-contenido").innerHTML =
         '<div style="color:#dc2626;font-size:0.85rem;">Error al cargar.</div>';
@@ -1025,14 +1043,21 @@ function cargarResumen() {
 }
 
 function filtrarTablaResumen() {
-  const nivel = document.getElementById("res-nivel").value;
-  const qMun  = document.getElementById("res-municipio").value.toLowerCase().trim();
-  const qCom  = document.getElementById("res-comision").value.toLowerCase().trim();
+  const nivel  = document.getElementById("res-nivel").value;
+  const qMun   = document.getElementById("res-municipio").value.toLowerCase().trim();
+  const qCom   = document.getElementById("res-comision").value.toLowerCase().trim();
+  const qZona  = document.getElementById("res-zona").value.trim();
+  const qPuesto= document.getElementById("res-puesto").value.trim();
+  const qMesa  = document.getElementById("res-mesa").value.trim();
   const filtered = resumenRows.filter(r => {
-    const okMun = !qMun || (r.municipio || "").toLowerCase().includes(qMun);
-    const okCom = !qCom || (r.comision  || "").toLowerCase().includes(qCom);
-    return okMun && okCom;
+    const okMun    = !qMun    || (r.municipio  || "").toLowerCase().includes(qMun);
+    const okCom    = !qCom    || (r.comision   || "").toLowerCase().includes(qCom);
+    const okZona   = !qZona   || String(r.zona        ?? "").includes(qZona);
+    const okPuesto = !qPuesto || String(r.cod_puesto  ?? "").includes(qPuesto);
+    const okMesa   = !qMesa   || String(r.mesa        ?? "").includes(qMesa);
+    return okMun && okCom && okZona && okPuesto && okMesa;
   });
+  resumenPage = 1;
   renderTablaResumen(filtered, nivel);
 }
 
