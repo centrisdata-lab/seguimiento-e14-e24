@@ -488,6 +488,22 @@
             <input type="text" id="res-mesa" placeholder="Todas" oninput="filtrarTablaResumen()" style="width:60px">
           </div>
           <div class="form-group" style="flex:none">
+            <label>Dif Ahora (min–max)</label>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" id="res-dif-ahora-min" placeholder="min" oninput="filtrarTablaResumen()" style="width:60px">
+              <span style="color:var(--gray);font-size:0.8rem">–</span>
+              <input type="number" id="res-dif-ahora-max" placeholder="max" oninput="filtrarTablaResumen()" style="width:60px">
+            </div>
+          </div>
+          <div class="form-group" style="flex:none">
+            <label>Dif Conservador (min–max)</label>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" id="res-dif-cons-min" placeholder="min" oninput="filtrarTablaResumen()" style="width:60px">
+              <span style="color:var(--gray);font-size:0.8rem">–</span>
+              <input type="number" id="res-dif-cons-max" placeholder="max" oninput="filtrarTablaResumen()" style="width:60px">
+            </div>
+          </div>
+          <div class="form-group" style="flex:none">
             <label>&nbsp;</label>
             <button class="btn-save" onclick="cargarResumen()" style="padding:0.5rem 1rem; font-size:0.8rem;">&#x21BB; Buscar</button>
           </div>
@@ -1049,13 +1065,23 @@ function filtrarTablaResumen() {
   const qZona  = document.getElementById("res-zona").value.trim();
   const qPuesto= document.getElementById("res-puesto").value.trim();
   const qMesa  = document.getElementById("res-mesa").value.trim();
+  const difAMin = document.getElementById("res-dif-ahora-min").value;
+  const difAMax = document.getElementById("res-dif-ahora-max").value;
+  const difCMin = document.getElementById("res-dif-cons-min").value;
+  const difCMax = document.getElementById("res-dif-cons-max").value;
   const filtered = resumenRows.filter(r => {
     const okMun    = !qMun    || (r.municipio  || "").toLowerCase().includes(qMun);
     const okCom    = !qCom    || (r.comision   || "").toLowerCase().includes(qCom);
     const okZona   = !qZona   || String(r.zona        ?? "").includes(qZona);
     const okPuesto = !qPuesto || String(r.cod_puesto  ?? "").includes(qPuesto);
     const okMesa   = !qMesa   || String(r.mesa        ?? "").includes(qMesa);
-    return okMun && okCom && okZona && okPuesto && okMesa;
+    const difA = (r.total_e24_ahora||0) - (r.total_e14_ahora||0);
+    const difC = (r.total_e24_conservador||0) - (r.total_e14_conservador||0);
+    const okDifAMin = difAMin === "" || difA >= parseFloat(difAMin);
+    const okDifAMax = difAMax === "" || difA <= parseFloat(difAMax);
+    const okDifCMin = difCMin === "" || difC >= parseFloat(difCMin);
+    const okDifCMax = difCMax === "" || difC <= parseFloat(difCMax);
+    return okMun && okCom && okZona && okPuesto && okMesa && okDifAMin && okDifAMax && okDifCMin && okDifCMax;
   });
   resumenPage = 1;
   renderTablaResumen(filtered, nivel);
