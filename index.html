@@ -144,6 +144,11 @@
   .badge-dif.zero { background:#e2e8f0; color:var(--gray); }
   .badge-alerta { display:inline-flex; align-items:center; gap:0.25rem; background:#fef3c7; color:#b45309; border:1px solid #fde68a; border-radius:6px; padding:0.15rem 0.5rem; font-size:0.7rem; font-weight:700; }
   .badge-ok { display:inline-flex; align-items:center; gap:0.25rem; background:#d1fae5; color:#059669; border:1px solid #a7f3d0; border-radius:6px; padding:0.15rem 0.5rem; font-size:0.7rem; font-weight:700; }
+  .paginacion { display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-top:0.75rem; font-size:0.78rem; }
+  .paginacion button { padding:0.25rem 0.6rem; border-radius:6px; border:1px solid #e2e8f0; background:white; cursor:pointer; font-size:0.78rem; color:var(--primary); }
+  .paginacion button:hover { background:var(--light); }
+  .paginacion button.active { background:var(--primary); color:white; border-color:var(--primary); font-weight:700; }
+  .paginacion button:disabled { opacity:0.4; cursor:default; }
 
   .cob-card { background:var(--white); border-radius:12px; padding:1rem 1.25rem; box-shadow:var(--shadow); border-top:4px solid #e2e8f0; }
   .cob-card.e14 { border-top-color:#7c3aed; }
@@ -530,6 +535,9 @@ const ST = {
 let resumenRows = [];
 let resumenMunRows = [];
 let resumenSort = { col: null, dir: 1, nivel: null };
+let resumenPage = 1;
+let resumenMunPage = 1;
+const PAGE_SIZE = 20;
 
 // ── Cargar estructura ──────────────────────────────────────────────────────────
 fetch(`${API_URL}/estructura.json`)
@@ -896,7 +904,7 @@ function cargarResumen() {
 
   fetch(url)
     .then(r => r.json())
-    .then(data => { resumenRows = data; resumenSort = { col: null, dir: 1, nivel }; renderTablaResumen(data, nivel); })
+    .then(data => { resumenRows = data; resumenPage = 1; resumenSort = { col: null, dir: 1, nivel }; renderTablaResumen(data, nivel); })
     .catch(() => {
       document.getElementById("resumen-contenido").innerHTML =
         '<div style="color:#dc2626;font-size:0.85rem;">Error al cargar.</div>';
@@ -988,6 +996,7 @@ function renderTablaResumen(rows, nivel) {
   });
   html += '</tr></thead><tbody>';
 
+  // Totales sobre TODOS los registros
   let tMesas=0, tE14a=0, tE24a=0, tE14c=0, tE24c=0;
   enriched.forEach(r => {
     tMesas += parseInt(r.mesas_registradas)||0;
@@ -995,6 +1004,14 @@ function renderTablaResumen(rows, nivel) {
     tE24a  += r.total_e24_ahora||0;
     tE14c  += r.total_e14_conservador||0;
     tE24c  += r.total_e24_conservador||0;
+  });
+
+  // Paginacion
+  const totalPags = Math.ceil(enriched.length / PAGE_SIZE);
+  if (resumenPage > totalPags) resumenPage = 1;
+  const paginados = enriched.slice((resumenPage-1)*PAGE_SIZE, resumenPage*PAGE_SIZE);
+
+  paginados.forEach(r => {
     html += "<tr>";
     cols.forEach(c => { html += `<td>${r[c.k] ?? ""}</td>`; });
     html += `
@@ -1010,7 +1027,7 @@ function renderTablaResumen(rows, nivel) {
 
   const tDa = tE24a - tE14a;
   const tDc = tE24c - tE14c;
-  const nLabel = rows.length + (nivel==="municipio"?" municipios":nivel==="zona"?" zonas":nivel==="comision"?" comisiones":nivel==="puesto"?" puestos":" mesas");
+  const nLabel = enriched.length + (nivel==="municipio"?" municipios":nivel==="zona"?" zonas":nivel==="comision"?" comisiones":nivel==="puesto"?" puestos":" mesas");
   html += `<tr class="total-row">`;
   cols.forEach((c, i) => { html += `<td>${i===0 ? "TOTAL ("+nLabel+")" : ""}</td>`; });
   html += `
@@ -1023,6 +1040,10 @@ function renderTablaResumen(rows, nivel) {
     <td style="text-align:center">${difBadge(tDc)}</td>
   </tr>`;
   html += "</tbody></table></div>";
+
+  // Controles de paginacion
+  html += pagControls(resumenPage, totalPags, 'resumenPage', `renderTablaResumen(resumenRows,'${nivel}')`);
+
   cont.innerHTML = html;
 }
 
@@ -1037,7 +1058,7 @@ function cargarResumenMunicipal() {
 
   fetch(url)
     .then(r => r.json())
-    .then(data => { resumenMunRows = data; renderTablaResumenMunicipal(data); })
+    .then(data => { resumenMunRows = data; resumenMunPage = 1; renderTablaResumenMunicipal(data); })
     .catch(() => {
       document.getElementById("resumen-municipal-contenido").innerHTML =
         '<div style="color:#dc2626;font-size:0.85rem;">Error al cargar.</div>';
@@ -1067,8 +1088,19 @@ function renderTablaResumenMunicipal(rows) {
     '</tr></thead><tbody>';
 
   let tE14a=0, tE24a=0, tE26a=0, tE14c=0, tE24c=0, tE26c=0;
-
   rows.forEach(r => {
+    tE14a += r.e14_ahora||0; tE24a += r.e24_ahora||0;
+    if (r.e26_ahora != null) tE26a += r.e26_ahora;
+    tE14c += r.e14_conservador||0; tE24c += r.e24_conservador||0;
+    if (r.e26_conservador != null) tE26c += r.e26_conservador;
+  });
+
+  // Paginacion
+  const totalPagsMun = Math.ceil(rows.length / PAGE_SIZE);
+  if (resumenMunPage > totalPagsMun) resumenMunPage = 1;
+  const paginadosMun = rows.slice((resumenMunPage-1)*PAGE_SIZE, resumenMunPage*PAGE_SIZE);
+
+  paginadosMun.forEach(r => {
     const e14a = r.e14_ahora || 0;
     const e24a = r.e24_ahora || 0;
     const e26a = r.e26_ahora !== null && r.e26_ahora !== undefined ? r.e26_ahora : null;
@@ -1076,15 +1108,11 @@ function renderTablaResumenMunicipal(rows) {
     const e24c = r.e24_conservador || 0;
     const e26c = r.e26_conservador !== null && r.e26_conservador !== undefined ? r.e26_conservador : null;
 
-    tE14a += e14a; tE24a += e24a; if (e26a !== null) tE26a += e26a;
-    tE14c += e14c; tE24c += e24c; if (e26c !== null) tE26c += e26c;
-
     const da1424 = e24a - e14a;
     const da1426 = e26a !== null ? e26a - e14a : null;
     const dc1424 = e24c - e14c;
     const dc1426 = e26c !== null ? e26c - e14c : null;
 
-    // Alerta si cualquier diferencia entre los 3 formatos no es cero
     const hayAlerta = (da1424 !== 0) || (da1426 !== null && da1426 !== 0) ||
                       (dc1424 !== 0) || (dc1426 !== null && dc1426 !== 0);
     const estadoBadge = hayAlerta
@@ -1122,7 +1150,25 @@ function renderTablaResumenMunicipal(rows) {
     <td></td>
   </tr>`;
   html += "</tbody></table></div>";
+  html += pagControls(resumenMunPage, totalPagsMun, 'resumenMunPage', 'renderTablaResumenMunicipal(resumenMunRows)');
   cont.innerHTML = html;
+}
+
+function pagControls(page, total, varName, renderCall) {
+  if (total <= 1) return '';
+  let html = '<div class="paginacion">';
+  html += `<button onclick="${varName}=1;${renderCall}" ${page===1?'disabled':''}>« Primera</button>`;
+  html += `<button onclick="${varName}--;${renderCall}" ${page===1?'disabled':''}>‹ Ant</button>`;
+  const desde = Math.max(1, page-2);
+  const hasta = Math.min(total, page+2);
+  for (let i=desde; i<=hasta; i++) {
+    html += `<button onclick="${varName}=${i};${renderCall}" class="${i===page?'active':''}">${i}</button>`;
+  }
+  html += `<button onclick="${varName}++;${renderCall}" ${page===total?'disabled':''}>Sig ›</button>`;
+  html += `<button onclick="${varName}=${total};${renderCall}" ${page===total?'disabled':''}>Última »</button>`;
+  html += `<span style="color:var(--gray);margin-left:0.5rem;">Página ${page} de ${total}</span>`;
+  html += '</div>';
+  return html;
 }
 
 function difBadge(v) {
