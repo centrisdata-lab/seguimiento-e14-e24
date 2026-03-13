@@ -655,6 +655,7 @@ function renderMunicipios(fmt) {
                      : (fmt === 'e14' || fmt === 'e24') ? munCompletado(fmt, m) : false;
     btn.className = "btn-mun" + (esPrio ? " prioritario" : esSec ? " secundario" : esTer ? " terciario" : "") + (m === ST[fmt].mun ? " active" : "");
     btn.textContent = m + (yaDigitado ? " ✓" : "");
+    btn.dataset.mun = m;
     btn.onclick = () => seleccionarMun(fmt, m);
     grid.appendChild(btn);
   });
@@ -809,7 +810,7 @@ function cargarVotosExistentes(fmt) {
           document.getElementById(id).disabled = true;
         });
         // Agregar ✓ al option de la mesa en el selector
-        const opt = document.querySelector(`#${fmt}-sel-mesa option[value="${s.mesa}"]`);
+        const opt = document.querySelector(`#${fmt}-sel-mesa option[value="${String(s.mesa)}"]`);
         if (opt && !opt.textContent.includes('✓')) opt.textContent += ' ✓';
       } else {
         permitirEdicion(fmt);
@@ -930,19 +931,17 @@ function enviarGuardar(fmt, payload, intento) {
       const k = `${s.mun}|${s.zona}|${s.codPuesto}|${s.mesa}`;
       if (fmt === 'e14') E14_DIGITADOS.add(k); else E24_DIGITADOS.add(k);
       // Actualizar ✓ en el selector de mesas
-      const opt = document.querySelector(`#${fmt}-sel-mesa option[value="${s.mesa}"]`);
+      const opt = document.querySelector(`#${fmt}-sel-mesa option[value="${String(s.mesa)}"]`);
       if (opt && !opt.textContent.includes('✓')) opt.textContent += ' ✓';
       // Recalcular municipio completo y actualizar boton si corresponde
       calcularMunsCompletos();
-      if (munCompletado(fmt, s.mun)) {
-        const munGrid = document.getElementById(`${fmt}-mun-grid`);
-        if (munGrid) {
-          munGrid.querySelectorAll('button').forEach(b => {
-            if (b.textContent.replace(' ✓','').trim() === s.mun && !b.textContent.includes('✓')) {
-              b.textContent += ' ✓';
-            }
-          });
-        }
+      const munGrid = document.getElementById(`${fmt}-mun-grid`);
+      if (munGrid) {
+        munGrid.querySelectorAll('button[data-mun]').forEach(b => {
+          if (b.dataset.mun === s.mun) {
+            if (munCompletado(fmt, s.mun) && !b.textContent.includes('✓')) b.textContent += ' ✓';
+          }
+        });
       }
     } else {
       if (intento < maxIntentos) {
