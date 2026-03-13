@@ -1364,13 +1364,25 @@ function pedirClaveControl() {
   }
 }
 
-const TOTAL_MESAS    = 16052;
-const TOTAL_MUNICIPIOS = 125;
+function calcularTotalesEstructura() {
+  if (!ESTRUCTURA) return { mesas: 0, municipios: 0 };
+  let mesas = 0;
+  const municipios = Object.keys(ESTRUCTURA).length;
+  for (const z of Object.values(ESTRUCTURA)) {
+    for (const p of Object.values(z)) {
+      for (const pd of Object.values(p)) {
+        mesas += (pd.mesas || []).length;
+      }
+    }
+  }
+  return { mesas, municipios };
+}
 
 function cargarCobertura() {
   fetch(`${API_URL}/cobertura`)
     .then(r => r.json())
     .then(d => {
+      const { mesas: TOTAL_MESAS, municipios: TOTAL_MUNICIPIOS } = calcularTotalesEstructura();
       const panel = document.getElementById("cobertura-panel");
       const items = [
         { cls:"e14", label:"E-14 digitado", val: d.e14_mesas, total: TOTAL_MESAS, unidad:"mesas" },
