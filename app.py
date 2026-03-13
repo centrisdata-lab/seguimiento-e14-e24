@@ -131,19 +131,32 @@ def get_votos():
     zona       = request.args.get("zona", type=int)
     cod_puesto = request.args.get("cod_puesto", type=int)
     mesa       = request.args.get("mesa", type=int)
+    todos      = request.args.get("todos")
 
-    if not municipio or zona is None or cod_puesto is None or mesa is None:
+    if not municipio or zona is None or cod_puesto is None:
         return jsonify({"error": "Faltan parametros"}), 400
 
     try:
         with get_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT * FROM votos
-                    WHERE municipio=%s AND zona=%s AND cod_puesto=%s AND mesa=%s
-                """, (municipio, zona, cod_puesto, mesa))
-                row = cur.fetchone()
-        return jsonify(dict(row) if row else {})
+                if todos:
+                    # Devolver todas las mesas del puesto con datos
+                    cur.execute("""
+                        SELECT mesa, e14_ahora, e14_conservador, e24_ahora, e24_conservador
+                        FROM votos
+                        WHERE municipio=%s AND zona=%s AND cod_puesto=%s
+                    """, (municipio, zona, cod_puesto))
+                    rows = cur.fetchall()
+                    return jsonify([dict(r) for r in rows])
+                else:
+                    if mesa is None:
+                        return jsonify({"error": "Falta mesa"}), 400
+                    cur.execute("""
+                        SELECT * FROM votos
+                        WHERE municipio=%s AND zona=%s AND cod_puesto=%s AND mesa=%s
+                    """, (municipio, zona, cod_puesto, mesa))
+                    row = cur.fetchone()
+                    return jsonify(dict(row) if row else {})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
