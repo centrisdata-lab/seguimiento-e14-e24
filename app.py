@@ -498,20 +498,33 @@ def get_faltantes():
                         SELECT UPPER(municipio) AS municipio, zona, cod_puesto, mesa
                         FROM votos WHERE {col} > 0 OR {col2} > 0
                     """)
-                    registrados = {(r["municipio"], r["zona"], r["cod_puesto"], r["mesa"])
+                    # registrados usa (municipio_upper, zona_int, cod_puesto_int, mesa_int)
+                    registrados = {(r["municipio"], int(r["zona"]), int(r["cod_puesto"]), int(r["mesa"]))
                                    for r in cur.fetchall()}
                     faltantes = []
                     for mun, zonas in estructura.items():
                         for zona, puestos in zonas.items():
+                            try:
+                                zona_int = int(zona)
+                            except (ValueError, TypeError):
+                                continue
                             for cod, pdata in puestos.items():
+                                try:
+                                    cod_int = int(cod)
+                                except (ValueError, TypeError):
+                                    continue
                                 for mesa in pdata["mesas"]:
-                                    key = (mun.upper(), int(zona), int(cod), int(mesa))
+                                    try:
+                                        mesa_int = int(mesa)
+                                    except (ValueError, TypeError):
+                                        continue
+                                    key = (mun.upper(), zona_int, cod_int, mesa_int)
                                     if key not in registrados:
                                         faltantes.append({
                                             "municipio": mun,
-                                            "zona": int(zona),
-                                            "cod_puesto": int(cod),
-                                            "mesa": int(mesa),
+                                            "zona": zona_int,
+                                            "cod_puesto": cod_int,
+                                            "mesa": mesa_int,
                                             "comision": pdata.get("comision", "")
                                         })
         return jsonify(faltantes)

@@ -1584,7 +1584,15 @@ function verFaltantes(fmt) {
 
   fetch(`${API_URL}/faltantes?fmt=${fmt}`)
     .then(r => r.json())
-    .then(data => { faltantesData = data; renderFaltantes(data, fmt); })
+    .then(data => {
+      if (!Array.isArray(data)) {
+        document.getElementById("modal-faltantes-contenido").innerHTML =
+          `<div style="color:#dc2626;font-size:0.85rem;">Error: ${data.error || "respuesta inesperada"}</div>`;
+        return;
+      }
+      faltantesData = data;
+      renderFaltantes(data, fmt);
+    })
     .catch(() => {
       document.getElementById("modal-faltantes-contenido").innerHTML =
         '<div style="color:#dc2626;font-size:0.85rem;">Error al cargar.</div>';
