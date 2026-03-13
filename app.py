@@ -29,36 +29,54 @@ def get_pool():
                     dsn=DATABASE_URL,
                     cursor_factory=RealDictCursor,
                     connect_timeout=10,
+                    keepalives=1,
+                    keepalives_idle=30,       # ping TCP cada 30s si idle
+                    keepalives_interval=10,   # reintentar cada 10s
+                    keepalives_count=5,       # hasta 5 reintentos
                     options="-c statement_timeout=15000"  # 15s max por query
                 )
     return _pool
 
 from contextlib import contextmanager
 
+def _conn_is_alive(conn):
+    """Verifica si la conexion sigue viva con un ping ligero."""
+    try:
+        conn.cursor().execute("SELECT 1")
+        return True
+    except Exception:
+        return False
+
 @contextmanager
-def get_conn(retries=3, wait=0.3):
-    """Obtiene una conexion del pool con reintentos si el pool esta lleno."""
+def get_conn(retries=4, wait=0.4):
+    """Obtiene una conexion del pool con reintentos.
+    Descarta conexiones muertas (SSL EOF) y obtiene una nueva."""
     conn = None
     last_err = None
     for attempt in range(retries):
         try:
             conn = get_pool().getconn()
-            # Verificar que la conexion este viva
-            if conn.closed:
-                get_pool().putconn(conn, close=True)
+            # Descartar si esta cerrada o muerta (SSL SYSCALL EOF)
+            if conn.closed or not _conn_is_alive(conn):
+                try:
+                    get_pool().putconn(conn, close=True)
+                except Exception:
+                    pass
                 conn = None
-                raise OperationalError("conexion cerrada")
+                raise OperationalError("conexion muerta, descartada")
             break
         except pool.PoolError as e:
             last_err = e
+            conn = None
             if attempt < retries - 1:
                 time.sleep(wait * (attempt + 1))
         except OperationalError as e:
             last_err = e
+            conn = None
             if attempt < retries - 1:
                 time.sleep(wait * (attempt + 1))
     if conn is None:
-        raise Exception(f"Pool agotado tras {retries} intentos: {last_err}")
+        raise Exception(f"No se pudo obtener conexion tras {retries} intentos: {last_err}")
     try:
         yield conn
     except Exception:
@@ -69,7 +87,11 @@ def get_conn(retries=3, wait=0.3):
         raise
     finally:
         try:
-            get_pool().putconn(conn)
+            # Si la conexion quedo en mal estado, cerrarla en lugar de devolverla
+            if conn.closed or conn.status != psycopg2.extensions.STATUS_READY:
+                get_pool().putconn(conn, close=True)
+            else:
+                get_pool().putconn(conn)
         except Exception:
             pass
 
