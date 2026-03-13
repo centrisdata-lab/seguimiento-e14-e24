@@ -201,7 +201,7 @@
     <button class="tab-btn" onclick="showTab('tab-e24')">E-24</button>
     <button class="tab-btn" onclick="showTab('tab-e26')">E-26</button>
     <button class="tab-btn" onclick="showTab('tab-resumen')">Resumen general</button>
-    <button class="tab-btn" onclick="pedirClaveControl()">Control</button>
+    <button class="tab-btn" onclick="showTab('tab-control'); cargarControl()">Control</button>
   </div>
 
   <!-- ===== TAB E-14 ===== -->
@@ -1347,22 +1347,7 @@ function showToast(msg, type="success") {
   setTimeout(() => { t.style.display = "none"; }, 3000);
 }
 
-// ── Control: clave de acceso ──────────────────────────────────────────────────
-let controlDesbloqueado = false;
 let ctrlRows = [];
-
-function pedirClaveControl() {
-  if (controlDesbloqueado) { showTab('tab-control'); cargarControl(); return; }
-  const clave = prompt("Ingresa la contrasena para acceder al modulo de Control:");
-  if (clave === null) return; // canceló
-  if (clave === "Antioqui@") {
-    controlDesbloqueado = true;
-    showTab('tab-control');
-    cargarControl();
-  } else {
-    showToast("Contrasena incorrecta", "error");
-  }
-}
 
 function calcularTotalesEstructura() {
   if (!ESTRUCTURA) return { mesas: 0, municipios: 0 };
