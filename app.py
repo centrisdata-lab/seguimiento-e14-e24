@@ -1,9 +1,11 @@
 import os
+import time
+import threading
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from psycopg2 import pool
+from psycopg2 import pool, OperationalError
 from datetime import datetime
 
 app = Flask(__name__, static_folder=".")
@@ -11,29 +13,65 @@ CORS(app)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# Pool de conexiones: soporta hasta 20 conexiones simultaneas
+# Pool de conexiones: Render free tier permite ~25 conexiones a PG
+# Con 400+ usuarios simultáneos el pool se comparte via Flask threads
 _pool = None
+_pool_lock = threading.Lock()
 
 def get_pool():
     global _pool
     if _pool is None:
-        _pool = pool.ThreadedConnectionPool(
-            minconn=2,
-            maxconn=20,
-            dsn=DATABASE_URL,
-            cursor_factory=RealDictCursor
-        )
+        with _pool_lock:
+            if _pool is None:
+                _pool = pool.ThreadedConnectionPool(
+                    minconn=5,
+                    maxconn=25,
+                    dsn=DATABASE_URL,
+                    cursor_factory=RealDictCursor,
+                    connect_timeout=10,
+                    options="-c statement_timeout=15000"  # 15s max por query
+                )
     return _pool
 
 from contextlib import contextmanager
 
 @contextmanager
-def get_conn():
-    conn = get_pool().getconn()
+def get_conn(retries=3, wait=0.3):
+    """Obtiene una conexion del pool con reintentos si el pool esta lleno."""
+    conn = None
+    last_err = None
+    for attempt in range(retries):
+        try:
+            conn = get_pool().getconn()
+            # Verificar que la conexion este viva
+            if conn.closed:
+                get_pool().putconn(conn, close=True)
+                conn = None
+                raise OperationalError("conexion cerrada")
+            break
+        except pool.PoolError as e:
+            last_err = e
+            if attempt < retries - 1:
+                time.sleep(wait * (attempt + 1))
+        except OperationalError as e:
+            last_err = e
+            if attempt < retries - 1:
+                time.sleep(wait * (attempt + 1))
+    if conn is None:
+        raise Exception(f"Pool agotado tras {retries} intentos: {last_err}")
     try:
         yield conn
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
     finally:
-        get_pool().putconn(conn)
+        try:
+            get_pool().putconn(conn)
+        except Exception:
+            pass
 
 
 def init_db():
@@ -205,9 +243,10 @@ def save_votos():
                       e14_ahora, e14_conservador, e24_ahora, e24_conservador,
                       observacion, usuario))
                 row = cur.fetchone()
-            conn.commit()
+                conn.commit()
         return jsonify({"ok": True, "data": dict(row)})
     except Exception as e:
+        print(f"ERROR save_votos: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -257,9 +296,10 @@ def save_votos_e26():
                     RETURNING *
                 """, (municipio, e26_ahora, e26_conservador, observacion, usuario))
                 row = cur.fetchone()
-            conn.commit()
+                conn.commit()
         return jsonify({"ok": True, "data": dict(row)})
     except Exception as e:
+        print(f"ERROR save_votos_e26: {e}")
         return jsonify({"error": str(e)}), 500
 
 

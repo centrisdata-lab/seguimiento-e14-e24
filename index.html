@@ -901,10 +901,13 @@ function guardar(fmt) {
     .catch(() => enviarGuardar(fmt, payload));
 }
 
-function enviarGuardar(fmt, payload) {
+function enviarGuardar(fmt, payload, intento) {
+  intento = intento || 1;
+  const maxIntentos = 4;
   const btn = document.getElementById(`${fmt}-btn-guardar`);
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Guardando...';
+  if (intento === 1) btn.innerHTML = '<span class="spinner"></span> Guardando...';
+  else btn.innerHTML = `<span class="spinner"></span> Reintentando ${intento}/${maxIntentos}...`;
 
   return fetch(`${API_URL}/votos`, {
     method: "POST",
@@ -913,8 +916,8 @@ function enviarGuardar(fmt, payload) {
   })
   .then(r => r.json())
   .then(data => {
-    btn.disabled = false; btn.innerHTML = "&#128190; Guardar";
     if (data.ok) {
+      btn.disabled = false; btn.innerHTML = "&#128190; Guardar";
       showToast("Guardado correctamente", "success");
       const ahora = new Date();
       document.getElementById(`${fmt}-estado-guardado`).textContent =
@@ -939,12 +942,21 @@ function enviarGuardar(fmt, payload) {
         }
       }
     } else {
-      showToast("Error: " + (data.error || "intenta de nuevo"), "error");
+      if (intento < maxIntentos) {
+        setTimeout(() => enviarGuardar(fmt, payload, intento + 1), intento * 800);
+      } else {
+        btn.disabled = false; btn.innerHTML = "&#128190; Guardar";
+        showToast("Error al guardar: " + (data.error || "intenta de nuevo"), "error");
+      }
     }
   })
   .catch(() => {
-    btn.disabled = false; btn.innerHTML = "&#128190; Guardar";
-    showToast("Error de conexion con el servidor", "error");
+    if (intento < maxIntentos) {
+      setTimeout(() => enviarGuardar(fmt, payload, intento + 1), intento * 800);
+    } else {
+      btn.disabled = false; btn.innerHTML = "&#128190; Guardar";
+      showToast("Error de conexion con el servidor", "error");
+    }
   });
 }
 
